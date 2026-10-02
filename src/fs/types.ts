@@ -36,6 +36,23 @@ export type StartTarget =
   | { kind: "shell"; target: string }
   | { kind: "missing"; path: string };
 
+/**
+ * Whether Moon Explorer opens folders, drives, This PC and Win+E instead of Windows Explorer
+ * (electron/default-file-manager, docs/default-file-manager.md).
+ * - `stale`: registered, but for another copy of the app (moved, updated to another folder or deleted).
+ * - `partial`: another program has taken over some of it since.
+ */
+export interface DefaultFileManagerStatus {
+  state: "on" | "off" | "stale" | "partial" | "unsupported";
+  enabled: boolean;
+  needsAttention: boolean;
+  registeredExe?: string | null;
+  currentExe?: string;
+  targets: { id: string; label: string; state: "on" | "off" | "stale" | "overridden" }[];
+  /** After switching off: values another program changed since, which were left alone. */
+  skipped?: { key: string; name: string }[];
+}
+
 export type TransferOp = "copy" | "move";
 export type ConflictChoice = "replace" | "keep" | "skip";
 
@@ -95,6 +112,9 @@ export interface MoonBridge {
   refreshDrives(): Promise<FsDrive[]>;
   env(): Promise<Record<string, string>>;
   takeStart(): Promise<StartTarget | null>;
+  defaultFileManager(): Promise<DefaultFileManagerStatus>;
+  /** Registers Moon Explorer (or repairs the registration), or gives everything back to Windows Explorer. */
+  setDefaultFileManager(enabled: boolean): Promise<DefaultFileManagerStatus>;
 
   list(dir: string): Promise<FsEntry[]>;
   stat(path: string): Promise<FsEntry>;

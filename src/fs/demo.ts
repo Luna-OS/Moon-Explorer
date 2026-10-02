@@ -8,6 +8,7 @@ import { DRIVES, ENTRIES } from "@/explorer/sample";
 import { basename, dirname, extname, isInside, join, normalize, samePath } from "./paths";
 import type {
   BridgeEvents,
+  DefaultFileManagerStatus,
   FsDrive,
   FsEntry,
   MoonBridge,
@@ -43,12 +44,29 @@ function file(name: string, size: number, mtime: number, text?: string): Node {
 
 type Listener = (data: unknown) => void;
 
+function demoDefaultFm(on: boolean): DefaultFileManagerStatus {
+  const state = on ? "on" : "off";
+  return {
+    state,
+    enabled: on,
+    needsAttention: false,
+    targets: [
+      { id: "folder", label: "Folders", state },
+      { id: "drive", label: "Drives", state },
+      { id: "this-pc", label: "This PC", state },
+      { id: "win-e", label: "Win+E / new Explorer windows", state },
+    ],
+  };
+}
+
 export class DemoBridge implements MoonBridge {
   readonly kind = "demo" as const;
   private roots = new Map<string, Node>();
   private listeners = new Map<string, Set<Listener>>();
   private taskSeq = 0;
   private start: StartTarget | null;
+  /** Pretends to register with Windows; the tests may set it to another state. */
+  defaultFm: DefaultFileManagerStatus = demoDefaultFm(false);
   /** Shell actions the UI asked for (open, terminal, …); the tests read them. */
   readonly shellCalls: { action: string; target: string }[] = [];
 
@@ -171,6 +189,15 @@ export class DemoBridge implements MoonBridge {
     const s = this.start;
     this.start = null;
     return Promise.resolve(s);
+  }
+
+  defaultFileManager(): Promise<DefaultFileManagerStatus> {
+    return Promise.resolve(this.defaultFm);
+  }
+
+  setDefaultFileManager(enabled: boolean): Promise<DefaultFileManagerStatus> {
+    this.defaultFm = demoDefaultFm(enabled);
+    return Promise.resolve(this.defaultFm);
   }
 
   async list(p: string): Promise<FsEntry[]> {

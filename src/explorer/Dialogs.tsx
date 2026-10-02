@@ -3,6 +3,7 @@ import { dirname, join, stem } from "@/fs/paths";
 import type { ConflictChoice } from "@/fs/types";
 import { CloseIcon } from "@/theme/icons";
 import { Modal } from "@/ui/Modal";
+import { DefaultFileManagerSetting } from "./DefaultFileManagerSetting";
 import { useStore } from "./model/store";
 import type { DialogRequest, Settings, Workspace } from "./model/workspace";
 import { planRenames, type CaseMode, type RenameRules } from "./rename";
@@ -397,6 +398,7 @@ function SettingsDialog({
       {toggle("preview", "Show the preview panel", "Alt+P")}
       {toggle("confirmDelete", "Ask before moving several items to the Recycle Bin")}
       {toggle("restoreSession", "Reopen my tabs at start")}
+      <DefaultFileManagerSetting bridge={ws.bridge} />
     </DialogFrame>
   );
 }

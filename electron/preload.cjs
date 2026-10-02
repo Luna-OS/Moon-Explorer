@@ -42,6 +42,8 @@ contextBridge.exposeInMainWorld("moon", {
   refreshDrives: () => call("sys:refreshDrives"),
   env: () => call("sys:env"),
   takeStart: () => call("sys:takeStart"),
+  defaultFileManager: () => call("sys:defaultFileManager"),
+  setDefaultFileManager: (enabled) => call("sys:setDefaultFileManager", enabled),
 
   list: (dir) => call("fs:list", dir),
   stat: (p) => call("fs:stat", p),

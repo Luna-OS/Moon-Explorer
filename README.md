@@ -42,6 +42,12 @@ Tabs, two panes side by side, a command palette, Quick Look, live search through
 [docs/desktop-app.md](docs/desktop-app.md) for the features, the keyboard shortcuts and how the
 pieces fit together.
 
+## Default file manager
+
+**Settings → Use as default file manager** lets folders, drives, This PC and Win+E open in Moon Explorer
+instead of Windows Explorer (per user, no admin rights, switch back any time). See
+[docs/default-file-manager.md](docs/default-file-manager.md).
+
 ## Theme
 
 All styling lives in `src/theme/` with `src/theme/tokens.css` as the single

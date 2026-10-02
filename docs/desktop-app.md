@@ -23,7 +23,7 @@ it uses an in-memory demo file system with the sample content.
 | **ZIP** | *Compress to ZIP*, *Extract here* and *Extract to “name”* (ZIP, TAR, GZ and more through Windows' own `tar`). |
 | **Folder sizes** | *Show folder sizes* adds them to the size column, calculated in the background. |
 | **Places and drives** | The sidebar shows your folders, pinned folders and every drive with its fill level and custom icon (see [drive-icons.md](drive-icons.md)). |
-| **Windows integration** | *Open in Terminal*, *Open with…*, *Show in Windows Explorer* and Windows' own *Properties* dialog. Hidden files follow Windows' hidden attribute (Ctrl+H shows them). |
+| **Windows integration** | *Open in Terminal*, *Open with…*, *Show in Windows Explorer* and Windows' own *Properties* dialog. Hidden files follow Windows' hidden attribute (Ctrl+H shows them). Moon Explorer can also be the [default file manager](default-file-manager.md). |
 
 ![Two panes](screenshots/desktop/two-panes.png)
 
@@ -60,6 +60,7 @@ it uses an in-memory demo file system with the sample content.
 | `electron/main.cjs` | The main process: the window (custom title bar, native window buttons in the theme's frame colors), file-system access, copy / move / delete tasks with progress, search, folder sizes, folder watching, and the `moon-file://` protocol that serves local files to the previews. |
 | `electron/preload.cjs` | The bridge (`window.moon`). Its shape is `MoonBridge` in `src/fs/types.ts`. |
 | `electron/start.cjs` | Turns the command line (a folder, a file, a drive root, `--this-pc`) into what to open. |
+| `electron/default-file-manager/` | Registers Moon Explorer as the default file manager and back (see [default-file-manager.md](default-file-manager.md)). |
 | `src/fs/` | The bridge types, Windows path helpers, formatting, and `DemoBridge`, the in-memory file system for the browser and the tests. |
 | `src/explorer/model/` | Plain TypeScript models: `PaneModel` (location, history, listing, filter, sort, selection, search) and `Workspace` (tabs, clipboard, undo, tasks, dialogs, settings). Components subscribe with `useStore`. |
 | `src/explorer/` | The views: `FileView` (virtualized list and icon grid), `PathBar`, `PaneView`, `Preview`, `Dialogs`, `Overlays` (palette, Quick Look, toasts) and `commands.tsx` (menus and shortcuts). |
@@ -75,8 +76,7 @@ runs the script in the UI (it gets `shot(name)` and `wait(ms)`, and the workspac
 
 ## Default file manager
 
-The default-file-manager module (`src/default-file-manager/`, a separate pull request) plugs into
-`electron/main.cjs` where the comment says so: `handleCliFlags()` goes before the single-instance
-lock, and its `startPathFromArgv()` replaces `startFromArgv()` from `electron/start.cjs`. Both
-return the same shape (`home`, `this-pc`, `folder`, `file`, `shell`, `missing`), and the UI
-already handles every kind, including handing `shell` targets back to Windows Explorer.
+**Settings → Use as default file manager** makes folders, drives, *This PC* and Win+E open in Moon Explorer
+instead of Windows Explorer, for the current user and without admin rights, and switches back just as easily.
+The installer offers the same on its last page. See [default-file-manager.md](default-file-manager.md) for what it
+changes in the registry, the safety rules and how to undo it by hand.
