@@ -158,12 +158,16 @@ export class Workspace extends Store implements PaneHost {
   toasts: Toast[] = [];
   dialog: DialogRequest | null = null;
   ready = false;
+  /** True while the drives' size and free space are being asked for again. */
+  drivesRefreshing = false;
 
   private closedTabs: { panes: SavedLocation[]; split: boolean; active: number; at: number }[] = [];
   private searches = new Map<string, PaneModel>();
   private taskWaiters = new Map<number, (t: TaskUpdate) => void>();
   private sizePending = new Set<string>();
   private toastSeq = 0;
+  private drivesRefresh: Promise<void> | null = null;
+  private drivesRefreshedAt = 0;
   private lastSelectPattern = "*";
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private unsubscribers: (() => void)[] = [];
@@ -200,6 +204,7 @@ export class Workspace extends Store implements PaneHost {
     ]);
     this.places = places;
     this.drives = drives;
+    this.drivesRefreshedAt = Date.now();
     this.env = env;
     this.unsubscribers.push(
       b.on("task:update", (t) => this.onTask(t)),
@@ -545,6 +550,8 @@ export class Workspace extends Store implements PaneHost {
       if (t.state === "error") this.toast(t.error ?? "Something went wrong.", { error: true });
       else if (t.state === "cancelled") this.toast("Cancelled.");
       else if (t.error) this.toast(t.error, { error: true });
+      // Copying, moving and deleting change how much space is free.
+      this.refreshDrivesSoon(2_000);
       const dirs = [
         t.destDir,
         ...(t.results ?? []).flatMap((r) => [dirname(r.from), r.to ? dirname(r.to) : null]),
@@ -1111,8 +1118,25 @@ export class Workspace extends Store implements PaneHost {
     this.updateSettings({ favorites: this.settings.favorites.filter((f) => !samePath(f, path)) });
   }
 
-  async refreshDrives() {
-    this.drives = await this.bridge.refreshDrives().catch(() => this.drives);
-    this.changed();
+  /** Asks for the drives' size and free space again; calls while one is running share it. */
+  refreshDrives(): Promise<void> {
+    this.drivesRefresh ??= (async () => {
+      this.drivesRefreshing = true;
+      this.changed();
+      try {
+        this.drives = await this.bridge.refreshDrives().catch(() => this.drives);
+      } finally {
+        this.drivesRefreshedAt = Date.now();
+        this.drivesRefreshing = false;
+        this.drivesRefresh = null;
+        this.changed();
+      }
+    })();
+    return this.drivesRefresh;
+  }
+
+  /** Refreshes the drives unless that happened less than `minGap` ms ago (focus, timers, tasks). */
+  refreshDrivesSoon(minGap = 15_000) {
+    if (Date.now() - this.drivesRefreshedAt >= minGap) void this.refreshDrives();
   }
 }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
 import { DemoBridge } from "@/fs/demo";
+import { formatCapacity } from "@/fs/format";
 import type { FsEntry } from "@/fs/types";
 import { planRenames } from "../rename";
 import { filterEntries, sortEntries } from "./pane";
@@ -259,5 +260,41 @@ describe("selection and folder tools", () => {
     await done;
     expect(await bridge.exists(`${DOCS}\\crescent.png`)).toBe(true);
     expect(ws.toasts.at(-1)?.error).toBe(true);
+  });
+});
+
+describe("drive sizes", () => {
+  const GB = 1024 ** 3;
+  const TB = 1024 ** 4;
+
+  it("shows three significant digits like Windows Explorer", () => {
+    expect(formatCapacity(145 * GB)).toBe("145 GB");
+    expect(formatCapacity(1.81 * TB)).toBe("1.81 TB");
+    expect(formatCapacity(12.34 * GB)).toBe("12.3 GB");
+    expect(formatCapacity(931.5 * GB)).toBe("932 GB");
+    // Just under 1 TB stays readable instead of "1000 GB".
+    expect(formatCapacity(1000 * GB)).toBe("0.98 TB");
+    expect(formatCapacity(512)).toBe("512 B");
+  });
+
+  it("asks for the drives again on F5 in This PC, and only once at a time", async () => {
+    localStorage.clear();
+    const bridge = new DemoBridge();
+    const ws = new Workspace(bridge, localStorage);
+    await ws.init();
+    let calls = 0;
+    bridge.refreshDrives = async () => {
+      calls++;
+      const drives = await bridge.drives();
+      return drives.map((d) => (d.id === "c" ? { ...d, used: d.total - 145 * GB } : d));
+    };
+    const pane = ws.pane!;
+    await pane.go({ kind: "this-pc" });
+    void pane.reload();
+    await ws.refreshDrives();
+    expect(calls).toBe(1);
+    const c = ws.drives.find((d) => d.id === "c")!;
+    expect(c.total - c.used).toBe(145 * GB);
+    expect(ws.drivesRefreshing).toBe(false);
   });
 });

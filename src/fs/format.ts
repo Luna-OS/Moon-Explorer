@@ -85,6 +85,22 @@ export function formatDate(ms: number, relative = true, now = new Date()): strin
   return DATE.format(d);
 }
 
+/**
+ * Drive sizes the way Windows Explorer shows them: binary units and three significant digits,
+ * so "145 GB", "12.3 GB", "1.81 TB".
+ */
+export function formatCapacity(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let value = Math.max(0, bytes);
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  const digits = unit === 0 || value >= 100 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toFixed(digits)} ${units[unit]}`;
+}
+
 /** "1 item", "3 items". */
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;

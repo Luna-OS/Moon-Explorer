@@ -5,7 +5,8 @@ import { describeChoice } from "@/drive-icons/describe";
 import { driveKey } from "@/drive-icons/store";
 import { CloseIcon, EditIcon } from "@/theme/icons";
 import { Modal } from "@/ui/Modal";
-import { DRIVE_KIND_LABELS, formatBytes, type Drive } from "./sample";
+import { formatCapacity } from "@/fs/format";
+import { DRIVE_KIND_LABELS, type Drive } from "./sample";
 
 /** A drive's properties, with the button to change its icon. */
 export function DriveProperties({
@@ -25,9 +26,9 @@ export function DriveProperties({
 
   const rows: [string, string][] = [
     ["Type", DRIVE_KIND_LABELS[drive.kind]],
-    ["Used space", formatBytes(drive.used)],
-    ["Free space", formatBytes(drive.total - drive.used)],
-    ["Capacity", formatBytes(drive.total)],
+    ["Used space", formatCapacity(drive.used)],
+    ["Free space", formatCapacity(drive.total - drive.used)],
+    ["Capacity", formatCapacity(drive.total)],
   ];
 
   return (

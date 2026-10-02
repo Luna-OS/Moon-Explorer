@@ -24,7 +24,7 @@ it uses an in-memory demo file system with the sample content.
 | **Checksums** | Right-click a file → *Checksums…* shows its SHA-256, SHA-1 and MD5, each with a copy button, and checks a pasted value against them, e.g. to verify a download. |
 | **ZIP** | *Compress to ZIP*, *Extract here* and *Extract to “name”* (ZIP, TAR, GZ and more through Windows' own `tar`). |
 | **Folder sizes** | *Show folder sizes* adds them to the size column, calculated in the background. |
-| **Places and drives** | The sidebar shows your folders, pinned folders and every drive with its fill level and custom icon (see [drive-icons.md](drive-icons.md)). |
+| **Places and drives** | The sidebar shows your folders, pinned folders and every drive with its fill level and custom icon (see [drive-icons.md](drive-icons.md)). Free space is shown the way Windows shows it ("145 GB free of 1.81 TB") and is checked again when the window comes back to the front, after copying, moving or deleting, once a minute, and with the refresh button next to the drives (or F5 in This PC). |
 | **Windows integration** | *Open in Terminal*, *Open with…*, *Show in Windows Explorer* and Windows' own *Properties* dialog. Hidden files follow Windows' hidden attribute (Ctrl+H shows them). Moon Explorer can also be the [default file manager](default-file-manager.md). |
 
 ![Two panes](screenshots/desktop/two-panes.png)
