@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type KeyboardEvent } from "react";
 import { nextRovingIndex } from "./roving";
-import type { MenuAnchor, MenuItem } from "./menu";
+import type { MenuAnchor, MenuEntry, MenuItem } from "./menu";
 
 /** A right-click menu with arrow-key navigation (WAI-ARIA menu pattern). */
 export function ContextMenu({
@@ -11,9 +11,10 @@ export function ContextMenu({
 }: {
   label: string;
   anchor: MenuAnchor;
-  items: MenuItem[];
+  items: MenuEntry[];
   onClose: () => void;
 }) {
+  const actionable = items.filter((i): i is MenuItem => i !== "separator" && !i.disabled);
   const ref = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -56,7 +57,7 @@ export function ContextMenu({
       return;
     }
     const index = itemRefs.current.findIndex((el) => el === document.activeElement);
-    const next = nextRovingIndex(e.key, Math.max(0, index), items.length, 1);
+    const next = nextRovingIndex(e.key, Math.max(0, index), actionable.length, 1);
     if (next !== null) {
       e.preventDefault();
       itemRefs.current[next]?.focus();
@@ -71,28 +72,39 @@ export function ContextMenu({
       tabIndex={-1}
       onKeyDown={onKeyDown}
       onContextMenu={(e) => e.preventDefault()}
-      className="me-popover fixed z-50 flex min-w-48 flex-col gap-0.5 p-1.5 outline-none"
+      className="me-popover fixed z-50 flex max-h-[85vh] min-w-48 flex-col gap-0.5 overflow-y-auto p-1.5 outline-none"
       style={{ left: anchor.x, top: anchor.y }}
     >
-      {items.map((item, i) => (
-        <button
-          key={item.label}
-          ref={(el) => {
-            itemRefs.current[i] = el;
-          }}
-          type="button"
-          role="menuitem"
-          tabIndex={-1}
-          className="me-menu-item"
-          onClick={() => {
-            onClose();
-            item.onSelect();
-          }}
-        >
-          <span className="text-(--me-text-muted)">{item.icon}</span>
-          {item.label}
-        </button>
-      ))}
+      {items.map((item, i) => {
+        if (item === "separator") {
+          return <div key={`sep-${i}`} role="separator" className="my-1 h-px bg-(--me-border)" />;
+        }
+        const k = actionable.indexOf(item);
+        return (
+          <button
+            key={item.label}
+            ref={(el) => {
+              if (k >= 0) itemRefs.current[k] = el;
+            }}
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            disabled={item.disabled}
+            className="me-menu-item disabled:cursor-default disabled:opacity-40"
+            style={item.danger ? { color: "var(--me-danger)" } : undefined}
+            onClick={() => {
+              onClose();
+              item.onSelect();
+            }}
+          >
+            <span className="text-(--me-text-muted)">{item.icon}</span>
+            <span className="flex-1">{item.label}</span>
+            {item.shortcut && (
+              <span className="pl-6 text-[0.6875rem] text-(--me-text-faint)">{item.shortcut}</span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

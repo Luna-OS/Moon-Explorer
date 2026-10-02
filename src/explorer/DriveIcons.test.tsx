@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { DemoBridge } from "@/fs/demo";
 import App from "@/App";
 import { DriveIconStoreContext } from "@/drive-icons/context";
 import { createLocalDriveIconStore } from "@/drive-icons/store";
 
 /** Renders the app the way it starts: with a store read fresh from localStorage. */
-function renderApp() {
-  return render(
+async function renderApp() {
+  const view = render(
     <DriveIconStoreContext.Provider value={createLocalDriveIconStore(localStorage)}>
-      <App />
+      <App bridge={new DemoBridge()} />
     </DriveIconStoreContext.Provider>,
   );
+  // The drives appear once the (in-memory) file system has answered.
+  await screen.findByRole("grid", { name: "Contents of Documents" });
+  return view;
 }
 
 function sidebarDrive(id: string) {
@@ -37,15 +41,15 @@ beforeEach(() => {
 });
 
 describe("custom drive icons in the explorer", () => {
-  it("shows the default icons until one is changed", () => {
-    renderApp();
+  it("shows the default icons until one is changed", async () => {
+    await renderApp();
     // In the sidebar the default is the moon-phase fill gauge.
     expect(iconOf(sidebarDrive("d"))).toBe("default");
     expect(sidebarDrive("d").querySelector("svg")).toBeInTheDocument();
   });
 
-  it("changes a drive's icon from the sidebar's context menu", () => {
-    renderApp();
+  it("changes a drive's icon from the sidebar's context menu", async () => {
+    await renderApp();
     changeIcon(sidebarDrive("d"), "Rocket");
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -56,9 +60,10 @@ describe("custom drive icons in the explorer", () => {
     expect(sidebarDrive("d")).toHaveFocus();
   });
 
-  it("shows the custom icon in the This PC view, the heading and the path bar", () => {
-    renderApp();
+  it("shows the custom icon in the This PC view, the heading and the path bar", async () => {
+    await renderApp();
     fireEvent.click(screen.getByRole("button", { name: "This PC" }));
+    await screen.findByRole("heading", { name: "Devices and drives" });
     const card = document.querySelector<HTMLElement>('[data-drive-card="e"]')!;
     expect(iconOf(card)).toBe("default");
 
@@ -67,24 +72,26 @@ describe("custom drive icons in the explorer", () => {
     expect(iconOf(sidebarDrive("e"))).toBe("builtin:gamepad");
 
     fireEvent.click(card);
-    expect(screen.getByRole("heading", { level: 2, name: "USB stick (E:)" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "USB stick (E:)" }),
+    ).toBeInTheDocument();
     expect(iconOf(screen.getByRole("heading", { level: 2 }))).toBe("builtin:gamepad");
     expect(iconOf(screen.getByRole("navigation", { name: "Path" }))).toBe("builtin:gamepad");
   });
 
-  it("keeps the icon after a restart", () => {
-    const first = renderApp();
+  it("keeps the icon after a restart", async () => {
+    const first = await renderApp();
     changeIcon(sidebarDrive("d"), "Planet");
     first.unmount();
 
-    renderApp();
+    await renderApp();
     expect(iconOf(sidebarDrive("d"))).toBe("builtin:planet");
   });
 
-  it("changes and resets the icon from the drive's properties", () => {
-    renderApp();
+  it("changes and resets the icon from the drive's properties", async () => {
+    await renderApp();
     fireEvent.click(sidebarDrive("z"));
-    fireEvent.click(screen.getByRole("button", { name: "Properties" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Properties" }));
     const properties = screen.getByRole("dialog", { name: "Starbase (Z:) properties" });
     expect(within(properties).getByText("Icon: Default icon")).toBeInTheDocument();
 
@@ -102,8 +109,8 @@ describe("custom drive icons in the explorer", () => {
     expect(iconOf(sidebarDrive("z"))).toBe("default");
   });
 
-  it("opens the drive menu from the keyboard and moves through it with arrows", () => {
-    renderApp();
+  it("opens the drive menu from the keyboard and moves through it with arrows", async () => {
+    await renderApp();
     const drive = sidebarDrive("c");
     drive.focus();
     // Shift+F10 / the Menu key fire a contextmenu event without a pointer position.

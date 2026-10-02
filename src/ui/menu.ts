@@ -3,7 +3,27 @@ import type { MouseEvent, ReactNode } from "react";
 export interface MenuItem {
   label: string;
   icon?: ReactNode;
+  /** Shown on the right, e.g. "Ctrl+C". */
+  shortcut?: string;
+  disabled?: boolean;
+  /** Destructive actions (delete) are tinted. */
+  danger?: boolean;
   onSelect: () => void;
+}
+
+/** A menu row, or a separator line between groups. */
+export type MenuEntry = MenuItem | "separator";
+
+/** Drops falsy entries and doubled, leading or trailing separators. */
+export function cleanMenu(entries: (MenuEntry | false | null | undefined)[]): MenuEntry[] {
+  const out: MenuEntry[] = [];
+  for (const e of entries) {
+    if (!e) continue;
+    if (e === "separator" && (out.length === 0 || out[out.length - 1] === "separator")) continue;
+    out.push(e);
+  }
+  while (out[out.length - 1] === "separator") out.pop();
+  return out;
 }
 
 /** Where a context menu opens, and the element that gets focus back. */
