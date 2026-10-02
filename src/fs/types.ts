@@ -78,6 +78,12 @@ export interface TextPreview {
   size: number;
 }
 
+export interface Checksums {
+  sha256: string;
+  sha1: string;
+  md5: string;
+}
+
 export interface FolderSize {
   size: number;
   files: number;
@@ -139,6 +145,8 @@ export interface MoonBridge {
   remove(opts: { paths: string[]; permanent: boolean }): Promise<number>;
   cancelTask(id: number): Promise<void>;
   dirSize(path: string): Promise<FolderSize>;
+  /** Lower-case hex digests of a file's content, read once. */
+  checksums(path: string): Promise<Checksums>;
   zip(sources: string[], dest: string): Promise<string>;
   unzip(archive: string, dest: string): Promise<string>;
   search(req: SearchRequest): Promise<void>;

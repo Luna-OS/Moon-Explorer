@@ -18,6 +18,7 @@ const path = require("path");
 const fs = require("fs");
 const fsp = fs.promises;
 const { pathToFileURL } = require("url");
+const crypto = require("crypto");
 const { execFile, spawn } = require("child_process");
 const { startFromArgv } = require("./start.cjs");
 const defaultFileManager = require("./default-file-manager/index.cjs");
@@ -760,6 +761,12 @@ function registerIpc() {
     if (t) t.cancelled = true;
   });
 
+  handle("fs:checksums", async (p) => {
+    const algorithms = ["sha256", "sha1", "md5"];
+    const hashes = algorithms.map((a) => crypto.createHash(a));
+    for await (const chunk of fs.createReadStream(p)) for (const h of hashes) h.update(chunk);
+    return Object.fromEntries(algorithms.map((a, i) => [a, hashes[i].digest("hex")]));
+  });
   handle("fs:dirSize", async (p) => {
     let size = 0;
     let files = 0;

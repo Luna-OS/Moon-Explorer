@@ -1,6 +1,7 @@
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { dirname, join, stem } from "@/fs/paths";
-import type { ConflictChoice } from "@/fs/types";
+import { formatBytes } from "@/fs/format";
+import type { Checksums, ConflictChoice } from "@/fs/types";
 import { CloseIcon } from "@/theme/icons";
 import { Modal } from "@/ui/Modal";
 import { DefaultFileManagerSetting } from "./DefaultFileManagerSetting";
@@ -58,6 +59,8 @@ export function Dialogs({ ws }: { ws: Workspace }) {
       return <BulkRenameDialog ws={ws} request={d} />;
     case "settings":
       return <SettingsDialog ws={ws} request={d} />;
+    case "checksums":
+      return <ChecksumsDialog ws={ws} request={d} />;
   }
 }
 
@@ -399,6 +402,119 @@ function SettingsDialog({
       {toggle("confirmDelete", "Ask before moving several items to the Recycle Bin")}
       {toggle("restoreSession", "Reopen my tabs at start")}
       <DefaultFileManagerSetting bridge={ws.bridge} />
+    </DialogFrame>
+  );
+}
+
+const DIGESTS: { key: keyof Checksums; label: string }[] = [
+  { key: "sha256", label: "SHA-256" },
+  { key: "sha1", label: "SHA-1" },
+  { key: "md5", label: "MD5" },
+];
+
+function ChecksumsDialog({
+  ws,
+  request,
+}: {
+  ws: Workspace;
+  request: Extract<DialogRequest, { type: "checksums" }>;
+}) {
+  const { entry } = request;
+  const id = useId();
+  const [sums, setSums] = useState<Checksums | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [compare, setCompare] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    ws.bridge
+      .checksums(entry.path)
+      .then((s) => live && setSums(s))
+      .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)));
+    return () => {
+      live = false;
+    };
+  }, [ws, entry.path]);
+
+  const wanted = compare.trim().toLowerCase().replace(/\s+/g, "");
+  const match = sums && wanted ? DIGESTS.find((d) => sums[d.key] === wanted) : undefined;
+
+  return (
+    <DialogFrame
+      title="Checksums"
+      wide
+      onClose={() => request.resolve(true)}
+      footer={
+        <button
+          type="button"
+          className="me-btn me-btn-primary"
+          onClick={() => request.resolve(true)}
+        >
+          Done
+        </button>
+      }
+    >
+      <p className="m-0 mb-3">
+        <span className="text-(--me-text)">{entry.name}</span>
+        {entry.size !== null && ` · ${formatBytes(entry.size)}`}
+      </p>
+      {error ? (
+        <p className="m-0" role="alert" style={{ color: "var(--me-danger)" }}>
+          Couldn&apos;t read the file: {error}
+        </p>
+      ) : !sums ? (
+        <p className="m-0" role="status">
+          Calculating…
+        </p>
+      ) : (
+        <dl className="m-0 grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2">
+          {DIGESTS.map((d) => (
+            <div key={d.key} className="contents">
+              <dt className="text-xs">{d.label}</dt>
+              <dd
+                className="m-0 font-mono text-xs break-all text-(--me-text) select-all"
+                data-digest={d.key}
+              >
+                {sums[d.key]}
+              </dd>
+              <dd className="m-0">
+                <button
+                  type="button"
+                  className="me-btn me-btn-sm"
+                  aria-label={`Copy ${d.label}`}
+                  onClick={() => {
+                    void ws.bridge.copyText(sums[d.key]);
+                    ws.toast(`Copied the ${d.label} checksum`, { timeout: 1800 });
+                  }}
+                >
+                  Copy
+                </button>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <label className="mt-4 mb-1.5 block" htmlFor={`${id}-compare`}>
+        Compare with a published checksum
+      </label>
+      <input
+        id={`${id}-compare`}
+        className="me-input w-full font-mono"
+        spellCheck={false}
+        placeholder="Paste a SHA-256, SHA-1 or MD5 value"
+        value={compare}
+        onChange={(e) => setCompare(e.target.value)}
+        aria-describedby={`${id}-result`}
+      />
+      <p id={`${id}-result`} className="m-0 mt-1.5 text-xs" role="status" aria-live="polite">
+        {!wanted || !sums ? (
+          ""
+        ) : match ? (
+          <span style={{ color: "var(--me-success)" }}>✓ Matches the {match.label} checksum.</span>
+        ) : (
+          <span style={{ color: "var(--me-danger)" }}>✗ Doesn&apos;t match any of them.</span>
+        )}
+      </p>
     </DialogFrame>
   );
 }

@@ -199,7 +199,30 @@ export function commands(ws: Workspace, onQuickLook: () => void): Command[] {
       shortcut: "Ctrl+Shift+C",
       run: () => ws.copyPaths(sel.length ? sel.map((e) => e.path) : [work ?? ""]),
     },
+    sel.length > 0 && {
+      id: "copy-name",
+      label: sel.length > 1 ? "Copy names" : "Copy name",
+      run: () => ws.copyNames(sel),
+    },
+    sel.length > 0 &&
+      pane.loc?.kind === "dir" && {
+        id: "new-folder-with-selection",
+        label: "New folder with selection…",
+        icon: <FolderIcon size={15} />,
+        run: () => void ws.newFolderWithSelection(pane, sel),
+      },
+    sel.length === 1 &&
+      !sel[0].isDir && {
+        id: "checksums",
+        label: "Checksums (SHA-256, SHA-1, MD5)",
+        run: () => ws.showChecksums(sel[0]),
+      },
     { id: "select-all", label: "Select all", shortcut: "Ctrl+A", run: () => pane.selectAll() },
+    {
+      id: "select-pattern",
+      label: "Select by pattern…",
+      run: () => void ws.selectByPattern(pane),
+    },
     {
       id: "invert",
       label: "Invert selection",
@@ -379,6 +402,17 @@ export function entryMenu(ws: Workspace, pane: PaneModel, entries: FsEntry[]): M
       shortcut: "Ctrl+Shift+C",
       onSelect: () => ws.copyPaths(paths),
     },
+    { label: one ? "Copy name" : "Copy names", onSelect: () => ws.copyNames(entries) },
+    pane.loc?.kind === "dir" && {
+      label: "New folder with selection…",
+      icon: <FolderIcon size={15} />,
+      onSelect: () => void ws.newFolderWithSelection(pane, entries),
+    },
+    one &&
+      !one.isDir && {
+        label: "Checksums…",
+        onSelect: () => ws.showChecksums(one),
+      },
     "separator",
     one?.isDir &&
       (ws.isFavorite(one.path)
@@ -457,6 +491,7 @@ export function backgroundMenu(ws: Workspace, pane: PaneModel): MenuEntry[] {
       onSelect: () => void newFileWithName(ws, pane),
     },
     { label: "Select all", shortcut: "Ctrl+A", onSelect: () => pane.selectAll() },
+    { label: "Select by pattern…", onSelect: () => void ws.selectByPattern(pane) },
     "separator",
     !!work && { label: "Open in Terminal", onSelect: () => void ws.bridge.terminal(work) },
     !!work && {

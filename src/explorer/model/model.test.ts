@@ -187,3 +187,77 @@ describe("start path (electron/start.cjs)", () => {
     expect(resolveStart([], { stat, cwd: "C:\\" })).toEqual({ kind: "home" });
   });
 });
+
+describe("selection and folder tools", () => {
+  let ws: Workspace;
+  let bridge: DemoBridge;
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  /** Answers the prompt the workspace is waiting on. */
+  async function answer(value: string | null) {
+    await tick();
+    expect(ws.dialog?.type).toBe("prompt");
+    if (ws.dialog?.type === "prompt") ws.dialog.resolve(value);
+  }
+
+  beforeEach(async () => {
+    localStorage.clear();
+    bridge = new DemoBridge();
+    ws = new Workspace(bridge, localStorage);
+    await ws.init();
+  });
+
+  it("selects by pattern, with several patterns separated by ;", async () => {
+    const pane = ws.pane!;
+    const done = ws.selectByPattern(pane);
+    await answer("*.png; *.jpg");
+    await done;
+    expect(pane.selected().map((e) => e.name)).toEqual(["crescent.png", "lunar-eclipse.jpg"]);
+
+    // Nothing matching leaves the selection alone.
+    const none = ws.selectByPattern(pane);
+    await answer("*.nothing");
+    await none;
+    expect(pane.selected()).toHaveLength(2);
+    expect(ws.toasts.at(-1)?.message).toBe('Nothing here matches "*.nothing".');
+  });
+
+  it("copies just the names", () => {
+    const pane = ws.pane!;
+    pane.selectPaths([`${DOCS}\\crescent.png`, `${DOCS}\\tokens.css`]);
+    ws.copyNames(pane.selected());
+    expect(bridge.shellCalls.at(-1)).toEqual({
+      action: "copyText",
+      target: "crescent.png\r\ntokens.css",
+    });
+  });
+
+  it("moves the selection into a new folder, and undoes it in one step", async () => {
+    const pane = ws.pane!;
+    const files = [`${DOCS}\\crescent.png`, `${DOCS}\\lunar-eclipse.jpg`];
+    pane.selectPaths(files);
+    const done = ws.newFolderWithSelection(pane);
+    await answer("Eclipse pictures");
+    await done;
+    const folder = `${DOCS}\\Eclipse pictures`;
+    expect(await bridge.list(folder).then((l) => l.map((e) => e.name).sort())).toEqual([
+      "crescent.png",
+      "lunar-eclipse.jpg",
+    ]);
+    expect(pane.selected().map((e) => e.path)).toEqual([folder]);
+    expect(ws.undoStack.at(-1)?.label).toBe("New folder with selection");
+
+    await ws.undo();
+    for (const f of files) expect(await bridge.exists(f)).toBe(true);
+    expect(await bridge.exists(folder)).toBe(false);
+  });
+
+  it("refuses a folder name Windows doesn't allow", async () => {
+    const pane = ws.pane!;
+    pane.selectPaths([`${DOCS}\\crescent.png`]);
+    const done = ws.newFolderWithSelection(pane);
+    await answer("a:b");
+    await done;
+    expect(await bridge.exists(`${DOCS}\\crescent.png`)).toBe(true);
+    expect(ws.toasts.at(-1)?.error).toBe(true);
+  });
+});

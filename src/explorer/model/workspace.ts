@@ -20,7 +20,14 @@ import type {
   TaskUpdate,
   TransferOp,
 } from "@/fs/types";
-import { PaneModel, type Location, type PaneHost, type Sort, type ViewMode } from "./pane";
+import {
+  filterEntries,
+  PaneModel,
+  type Location,
+  type PaneHost,
+  type Sort,
+  type ViewMode,
+} from "./pane";
 import { Store } from "./store";
 
 export const SETTINGS_KEY = "moonexplorer.settings";
@@ -89,7 +96,9 @@ export class Tab {
 export type UndoEntry =
   | { type: "rename"; label: string; renames: { from: string; to: string }[] }
   | { type: "move" | "copy"; label: string; results: { from: string; to: string }[] }
-  | { type: "create"; label: string; path: string };
+  | { type: "create"; label: string; path: string }
+  /** Several steps that undo together, last one first. */
+  | { type: "group"; label: string; steps: UndoEntry[] };
 
 export interface Toast {
   id: number;
@@ -117,7 +126,8 @@ export type DialogRequest =
       resolve: (value: string | null) => void;
     }
   | { type: "bulk-rename"; pane: PaneModel; entries: FsEntry[]; resolve: (ok: boolean) => void }
-  | { type: "settings"; resolve: (ok: boolean) => void };
+  | { type: "settings"; resolve: (ok: boolean) => void }
+  | { type: "checksums"; entry: FsEntry; resolve: (ok: boolean) => void };
 
 type WithoutResolve<T> = T extends unknown ? Omit<T, "resolve"> : never;
 /** A dialog request before the workspace adds its `resolve`. */
@@ -154,6 +164,7 @@ export class Workspace extends Store implements PaneHost {
   private taskWaiters = new Map<number, (t: TaskUpdate) => void>();
   private sizePending = new Set<string>();
   private toastSeq = 0;
+  private lastSelectPattern = "*";
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private unsubscribers: (() => void)[] = [];
 
@@ -871,6 +882,96 @@ export class Workspace extends Store implements PaneHost {
     });
   }
 
+  copyNames(entries: FsEntry[]) {
+    if (!entries.length) return;
+    void this.bridge.copyText(entries.map((e) => e.name).join("\r\n"));
+    this.toast(entries.length === 1 ? "Copied the name" : `Copied ${entries.length} names`, {
+      timeout: 1800,
+    });
+  }
+
+  /**
+   * Selects the entries whose names match a pattern: wildcards like `*.jpg` or `IMG_2026*`, or
+   * words like the filter box. Several patterns are separated by `;`.
+   */
+  async selectByPattern(pane: PaneModel) {
+    const input = await this.prompt(
+      "Select by pattern",
+      "Names like *.jpg or IMG_2026*; separate several patterns with ;",
+      this.lastSelectPattern,
+      "Select",
+    );
+    const patterns = (input ?? "")
+      .split(";")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (!input || !patterns.length) return;
+    this.lastSelectPattern = input;
+    const hits = new Set(patterns.flatMap((p) => filterEntries(pane.view, p).map((e) => e.path)));
+    if (!hits.size) {
+      this.toast(`Nothing here matches "${input}".`, { timeout: 2400 });
+      return;
+    }
+    pane.selectPaths([...hits]);
+    this.toast(`Selected ${plural(hits.size, "item")}`, { timeout: 1800 });
+  }
+
+  /** Makes a new folder next to the selection and moves the selection into it. */
+  async newFolderWithSelection(pane: PaneModel, entries = pane.selected()) {
+    const dir = pane.path;
+    if (!dir || !entries.length) return;
+    const suggestion =
+      entries.length === 1
+        ? entries[0].isDir
+          ? `${entries[0].name} folder`
+          : stem(entries[0].name)
+        : "New folder";
+    const name = await this.prompt(
+      "New folder with selection",
+      `Folder name for ${entries.length === 1 ? `"${entries[0].name}"` : plural(entries.length, "item")}`,
+      suggestion,
+      "Create and move",
+    );
+    if (!name?.trim()) return;
+    const bad = invalidNameReason(name.trim());
+    if (bad) {
+      this.toast(bad, { error: true });
+      return;
+    }
+    let folder: string;
+    try {
+      folder = await this.bridge.mkdir(dir, name.trim());
+    } catch (e) {
+      this.toast((e as Error).message, { error: true });
+      return;
+    }
+    const before = this.undoStack.length;
+    const t = await this.transfer(
+      "move",
+      entries.map((e) => e.path),
+      folder,
+    );
+    const create: UndoEntry = { type: "create", label: "New folder", path: folder };
+    if (t?.state === "done") {
+      // One undo step: move everything back, then remove the folder.
+      const moved = this.undoStack.length > before ? this.undoStack.splice(before) : [];
+      this.pushUndo({
+        type: "group",
+        label: "New folder with selection",
+        steps: [create, ...moved],
+      });
+    } else {
+      this.pushUndo(create);
+    }
+    await pane.reload();
+    pane.selectPaths([folder]);
+  }
+
+  /** Shows SHA-256, SHA-1 and MD5 of a file, with a field to compare against a published value. */
+  showChecksums(entry: FsEntry) {
+    if (!entry.isDir) void this.ask<boolean>({ type: "checksums", entry });
+  }
+
   /** Folder sizes for the size column: computed in the background, two at a time. */
   folderSize(path: string): FolderSize | undefined {
     const known = this.folderSizes.get(path);
@@ -920,40 +1021,46 @@ export class Workspace extends Store implements PaneHost {
       return;
     }
     try {
-      if (e.type === "rename") {
-        for (const r of e.renames.slice().reverse()) await this.bridge.rename(r.to, r.from);
-        this.reloadPanesShowing(e.renames.map((r) => dirname(r.from)));
-      } else if (e.type === "move") {
-        const failed: { from: string; to: string }[] = [];
-        for (const r of e.results.slice().reverse()) {
-          try {
-            await this.bridge.rename(r.to, r.from);
-          } catch {
-            failed.push(r);
-          }
-        }
-        // Across drives a rename fails; move those back with a normal task.
-        const byDir = new Map<string, string[]>();
-        for (const r of failed) {
-          const d = dirname(r.from) ?? "";
-          byDir.set(d, [...(byDir.get(d) ?? []), r.to]);
-        }
-        for (const [d, list] of byDir) {
-          await this.waitForTask(
-            await this.bridge.transfer({ op: "move", sources: list, destDir: d, conflict: "keep" }),
-          );
-        }
-        this.reloadPanesShowing(e.results.flatMap((r) => [dirname(r.from), dirname(r.to)]));
-      } else if (e.type === "copy") {
-        await this.waitForTask(
-          await this.bridge.remove({ paths: e.results.map((r) => r.to), permanent: false }),
-        );
-      } else if (e.type === "create") {
-        await this.waitForTask(await this.bridge.remove({ paths: [e.path], permanent: false }));
-      }
+      await this.undoEntry(e);
       this.toast(`Undone: ${e.label}`, { timeout: 2200 });
     } catch (err) {
       this.toast(`Couldn't undo: ${(err as Error).message}`, { error: true });
+    }
+  }
+
+  private async undoEntry(e: UndoEntry): Promise<void> {
+    if (e.type === "rename") {
+      for (const r of e.renames.slice().reverse()) await this.bridge.rename(r.to, r.from);
+      this.reloadPanesShowing(e.renames.map((r) => dirname(r.from)));
+    } else if (e.type === "move") {
+      const failed: { from: string; to: string }[] = [];
+      for (const r of e.results.slice().reverse()) {
+        try {
+          await this.bridge.rename(r.to, r.from);
+        } catch {
+          failed.push(r);
+        }
+      }
+      // Across drives a rename fails; move those back with a normal task.
+      const byDir = new Map<string, string[]>();
+      for (const r of failed) {
+        const d = dirname(r.from) ?? "";
+        byDir.set(d, [...(byDir.get(d) ?? []), r.to]);
+      }
+      for (const [d, list] of byDir) {
+        await this.waitForTask(
+          await this.bridge.transfer({ op: "move", sources: list, destDir: d, conflict: "keep" }),
+        );
+      }
+      this.reloadPanesShowing(e.results.flatMap((r) => [dirname(r.from), dirname(r.to)]));
+    } else if (e.type === "copy") {
+      await this.waitForTask(
+        await this.bridge.remove({ paths: e.results.map((r) => r.to), permanent: false }),
+      );
+    } else if (e.type === "group") {
+      for (const step of e.steps.slice().reverse()) await this.undoEntry(step);
+    } else if (e.type === "create") {
+      await this.waitForTask(await this.bridge.remove({ paths: [e.path], permanent: false }));
     }
   }
 

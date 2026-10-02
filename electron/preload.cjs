@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld("moon", {
   remove: (opts) => call("fs:delete", opts),
   cancelTask: (id) => call("task:cancel", id),
   dirSize: (p) => call("fs:dirSize", p),
+  checksums: (p) => call("fs:checksums", p),
   zip: (sources, dest) => call("fs:zip", sources, dest),
   unzip: (archive, dest) => call("fs:unzip", archive, dest),
   search: (opts) => call("search:start", opts),

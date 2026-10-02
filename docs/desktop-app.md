@@ -20,6 +20,8 @@ it uses an in-memory demo file system with the sample content.
 | **File operations** | Copy, cut and paste (also with Windows Explorer through the clipboard), drag and drop in and out of the app, a conflict dialog (*Replace*, *Keep both*, *Skip*), progress with *Cancel* in the status bar, Recycle Bin or permanent delete. |
 | **Undo** | Ctrl+Z undoes renames, moves, copies and new files or folders. |
 | **Rename** | F2 renames in place. With several items selected it opens bulk rename: a pattern with `{name}`, `{n}`, `{date}`, `{folder}`, find and replace (with regular expressions) and letter case, with a live preview. |
+| **Selection tools** | *Select by pattern…* selects names like `*.jpg` or `IMG_2026*` (several patterns separated by `;`). *New folder with selection…* moves the selected items into a new folder (one Ctrl+Z puts them back). *Copy name* copies just the names, without the path. |
+| **Checksums** | Right-click a file → *Checksums…* shows its SHA-256, SHA-1 and MD5, each with a copy button, and checks a pasted value against them, e.g. to verify a download. |
 | **ZIP** | *Compress to ZIP*, *Extract here* and *Extract to “name”* (ZIP, TAR, GZ and more through Windows' own `tar`). |
 | **Folder sizes** | *Show folder sizes* adds them to the size column, calculated in the background. |
 | **Places and drives** | The sidebar shows your folders, pinned folders and every drive with its fill level and custom icon (see [drive-icons.md](drive-icons.md)). |
