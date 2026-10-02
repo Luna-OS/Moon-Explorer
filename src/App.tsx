@@ -1,12 +1,13 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { Sky } from "@/theme/Sky";
-import { MoonPhase } from "@/theme/MoonPhase";
 import { useDocumentTheme, type ThemeChoice } from "@/theme/useTheme";
 import {
   BackIcon,
   ChevronRightIcon,
+  ComputerIcon,
   DiskIcon,
   DownloadIcon,
+  EditIcon,
   FolderIcon,
   ForwardIcon,
   GridIcon,
@@ -22,7 +23,13 @@ import {
   UpIcon,
 } from "@/theme/icons";
 import { KindIcon } from "@/explorer/KindIcon";
+import { DriveProperties } from "@/explorer/DriveProperties";
+import { ThisPcView } from "@/explorer/ThisPcView";
 import { DRIVES, ENTRIES, PLACES, formatBytes, type Drive } from "@/explorer/sample";
+import { DriveIcon } from "@/drive-icons/DriveIcon";
+import { DriveIconPicker } from "@/drive-icons/DriveIconPicker";
+import { ContextMenu } from "@/ui/ContextMenu";
+import { anchorFromEvent, type MenuAnchor } from "@/ui/menu";
 
 const PLACE_ICONS: Record<string, ReactNode> = {
   home: <HomeIcon />,
@@ -54,26 +61,56 @@ function saveThemeChoice(choice: ThemeChoice) {
 
 type ViewMode = "list" | "grid";
 
+/** Where the explorer is: a place (a folder on C:), "This PC" or a drive's root. */
+type Location = { type: "place"; id: string } | { type: "this-pc" } | { type: "drive"; id: string };
+
+/** The open drive dialog. The icon picker can go back to the properties it came from. */
+type DriveDialog = { type: "properties" | "icon"; driveId: string; fromProperties?: boolean };
+
 export default function App() {
   const [themeChoice, setThemeChoice] = useState<ThemeChoice>(loadThemeChoice);
   useDocumentTheme(themeChoice);
 
-  const [placeId, setPlaceId] = useState("documents");
+  const [location, setLocation] = useState<Location>({ type: "place", id: "documents" });
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>("tokens.css");
+  const [menu, setMenu] = useState<{ drive: Drive; anchor: MenuAnchor } | null>(null);
+  const [dialog, setDialog] = useState<DriveDialog | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
 
-  const place = PLACES.find((p) => p.id === placeId) ?? PLACES[0];
+  const system = DRIVES[0];
+  const place =
+    location.type === "place" ? (PLACES.find((p) => p.id === location.id) ?? PLACES[0]) : null;
+  // The drive the current location is on.
+  const drive =
+    location.type === "drive" ? (DRIVES.find((d) => d.id === location.id) ?? system) : system;
+  const isThisPc = location.type === "this-pc";
+  const title = isThisPc
+    ? "This PC"
+    : location.type === "drive"
+      ? `${drive.label} (${drive.letter})`
+      : (place?.label ?? "");
+  const crumbs = isThisPc
+    ? ["This PC"]
+    : location.type === "drive"
+      ? [title]
+      : [system.letter, "Users", ...(place?.path ?? [])];
+
   const entries = useMemo(() => {
     const q = query.trim().toLowerCase();
     return q ? ENTRIES.filter((e) => e.name.toLowerCase().includes(q)) : ENTRIES;
   }, [query]);
   const selectedEntry = entries.find((e) => e.name === selected);
-  const system = DRIVES[0];
+  const dialogDrive = dialog && DRIVES.find((d) => d.id === dialog.driveId);
 
   function chooseTheme(choice: ThemeChoice) {
     setThemeChoice(choice);
     saveThemeChoice(choice);
+  }
+
+  function openDriveMenu(d: Drive, e: MouseEvent<HTMLButtonElement>) {
+    setMenu({ drive: d, anchor: anchorFromEvent(e) });
   }
 
   return (
@@ -108,9 +145,9 @@ export default function App() {
           className="me-inset mx-2 flex h-8 min-w-0 flex-1 items-center gap-0.5 px-1.5 text-[0.8125rem]"
         >
           <span className="px-1 text-(--me-text-faint)">
-            <DiskIcon size={14} />
+            {isThisPc ? <ComputerIcon size={14} /> : <DriveIcon drive={drive} size={14} />}
           </span>
-          {[system.letter, "Users", ...place.path].map((part, i, all) => (
+          {crumbs.map((part, i, all) => (
             <span key={`${part}-${i}`} className="flex items-center gap-0.5">
               {i > 0 && (
                 <span className="text-(--me-text-faint)">
@@ -121,6 +158,11 @@ export default function App() {
                 type="button"
                 className="me-crumb"
                 aria-current={i === all.length - 1 ? "page" : undefined}
+                onClick={
+                  location.type === "place" && i === 0
+                    ? () => setLocation({ type: "drive", id: system.id })
+                    : undefined
+                }
               >
                 {part}
               </button>
@@ -135,8 +177,8 @@ export default function App() {
           <input
             type="search"
             className="me-input w-56 pl-8"
-            placeholder={`Search ${place.label}`}
-            aria-label={`Search ${place.label}`}
+            placeholder={`Search ${title}`}
+            aria-label={`Search ${title}`}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -144,7 +186,7 @@ export default function App() {
       </header>
 
       <div className="relative z-10 grid min-h-0 flex-1 grid-cols-[14.5rem_minmax(0,1fr)]">
-        <aside className="flex min-h-0 flex-col gap-6 overflow-y-auto border-r border-(--me-border) bg-(--me-glass-bottom) px-3 py-5 backdrop-blur-md">
+        <aside className="flex min-h-0 flex-col gap-5 overflow-y-auto border-r border-(--me-border) bg-(--me-glass-bottom) px-3 py-5 backdrop-blur-md">
           <div className="flex items-center gap-3 px-2">
             <img
               src="/moon-explorer-logo.svg"
@@ -162,18 +204,14 @@ export default function App() {
           <nav aria-label="Places" className="flex flex-col gap-0.5">
             <div className="me-eyebrow mb-1 px-3">Places</div>
             {PLACES.map((p) => {
-              const current = p.id === placeId;
+              const current = location.type === "place" && p.id === location.id;
               return (
                 <button
                   key={p.id}
                   type="button"
                   aria-current={current ? "page" : undefined}
-                  onClick={() => setPlaceId(p.id)}
-                  className={`flex h-9 items-center gap-3 rounded-[0.7rem] px-3 text-sm font-medium transition-colors duration-150 ${
-                    current
-                      ? "bg-(--me-selected) text-(--me-accent) shadow-[inset_0_0_0_1px_rgb(185_174_251/0.3)]"
-                      : "text-(--me-text-muted) hover:bg-(--me-hover) hover:text-(--me-text)"
-                  }`}
+                  onClick={() => setLocation({ type: "place", id: p.id })}
+                  className={navItemClass(current)}
                 >
                   {PLACE_ICONS[p.id]}
                   <span className="flex-1 text-left">{p.label}</span>
@@ -182,10 +220,26 @@ export default function App() {
             })}
           </nav>
 
-          <section aria-label="Drives" className="flex flex-col gap-2">
+          <section aria-label="Drives" className="flex flex-col gap-1.5">
             <div className="me-eyebrow px-3">Drives</div>
+            <button
+              type="button"
+              data-place="this-pc"
+              aria-current={isThisPc ? "page" : undefined}
+              onClick={() => setLocation({ type: "this-pc" })}
+              className={navItemClass(isThisPc)}
+            >
+              <ComputerIcon />
+              <span className="flex-1 text-left">This PC</span>
+            </button>
             {DRIVES.map((d) => (
-              <DriveGauge key={d.id} drive={d} />
+              <DriveGauge
+                key={d.id}
+                drive={d}
+                current={location.type === "drive" && location.id === d.id}
+                onOpen={() => setLocation({ type: "drive", id: d.id })}
+                onContextMenu={(e) => openDriveMenu(d, e)}
+              />
             ))}
           </section>
 
@@ -217,43 +271,68 @@ export default function App() {
         <div className="flex min-h-0 min-w-0 flex-col">
           <div className="flex items-center justify-between gap-4 px-6 pt-5 pb-4">
             <div className="min-w-0">
-              <h2 className="text-2xl font-semibold tracking-tight">{place.label}</h2>
+              <h2 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
+                {location.type === "drive" && <DriveIcon drive={drive} size={26} />}
+                {title}
+              </h2>
               <p className="text-sm text-(--me-text-muted)">
-                {entries.length} items{query && ` matching “${query}”`}
+                {isThisPc
+                  ? `${DRIVES.length} drives`
+                  : `${entries.length} items${query ? ` matching “${query}”` : ""}`}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex gap-1" role="group" aria-label="View">
+              {location.type === "drive" && (
                 <button
                   type="button"
-                  className="me-btn me-btn-ghost me-btn-icon"
-                  aria-pressed={viewMode === "list"}
-                  aria-label="Details view"
-                  onClick={() => setViewMode("list")}
+                  className="me-btn me-btn-ghost"
+                  onClick={() => setDialog({ type: "properties", driveId: drive.id })}
                 >
-                  <ListIcon />
+                  <DiskIcon size={15} />
+                  Properties
                 </button>
-                <button
-                  type="button"
-                  className="me-btn me-btn-ghost me-btn-icon"
-                  aria-pressed={viewMode === "grid"}
-                  aria-label="Icon view"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <GridIcon />
-                </button>
-              </div>
-              <button type="button" className="me-btn me-btn-primary">
-                <PlusIcon />
-                New folder
-              </button>
+              )}
+              {!isThisPc && (
+                <>
+                  <div className="flex gap-1" role="group" aria-label="View">
+                    <button
+                      type="button"
+                      className="me-btn me-btn-ghost me-btn-icon"
+                      aria-pressed={viewMode === "list"}
+                      aria-label="Details view"
+                      onClick={() => setViewMode("list")}
+                    >
+                      <ListIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="me-btn me-btn-ghost me-btn-icon"
+                      aria-pressed={viewMode === "grid"}
+                      aria-label="Icon view"
+                      onClick={() => setViewMode("grid")}
+                    >
+                      <GridIcon />
+                    </button>
+                  </div>
+                  <button type="button" className="me-btn me-btn-primary">
+                    <PlusIcon />
+                    New folder
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
           <main className="min-h-0 flex-1 px-6 pb-4">
             <div className="me-glass h-full overflow-auto">
-              {viewMode === "list" ? (
-                <table className="me-table" aria-label={`Contents of ${place.label}`}>
+              {isThisPc ? (
+                <ThisPcView
+                  drives={DRIVES}
+                  onOpen={(d) => setLocation({ type: "drive", id: d.id })}
+                  onContextMenu={openDriveMenu}
+                />
+              ) : viewMode === "list" ? (
+                <table className="me-table" aria-label={`Contents of ${title}`}>
                   <thead>
                     <tr>
                       <th className="w-[46%] rounded-tl-[var(--radius-lg)] pl-4">Name</th>
@@ -288,7 +367,7 @@ export default function App() {
               ) : (
                 <ul
                   className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2 p-3"
-                  aria-label={`Contents of ${place.label}`}
+                  aria-label={`Contents of ${title}`}
                 >
                   {entries.map((e) => (
                     <li key={e.name}>
@@ -313,29 +392,107 @@ export default function App() {
           </main>
 
           <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-(--me-border) bg-(--me-glass-bottom) px-6 py-2 text-xs text-(--me-text-muted) tabular-nums backdrop-blur-md">
-            <span>{entries.length} items</span>
-            {selectedEntry && (
+            <span>{isThisPc ? `${DRIVES.length} drives` : `${entries.length} items`}</span>
+            {!isThisPc && selectedEntry && (
               <span>
                 1 selected
                 {selectedEntry.size !== undefined && ` · ${formatBytes(selectedEntry.size)}`}
               </span>
             )}
             <span className="ml-auto">
-              {formatBytes(system.total - system.used, 0)} free on {system.label} ({system.letter})
+              {formatBytes(drive.total - drive.used, 0)} free on {drive.label} ({drive.letter})
             </span>
           </footer>
         </div>
       </div>
+
+      {menu && (
+        <ContextMenu
+          label={`${menu.drive.label} (${menu.drive.letter})`}
+          anchor={menu.anchor}
+          onClose={closeMenu}
+          items={[
+            {
+              label: "Open",
+              icon: <FolderIcon size={15} />,
+              onSelect: () => setLocation({ type: "drive", id: menu.drive.id }),
+            },
+            {
+              label: "Change icon…",
+              icon: <EditIcon size={15} />,
+              onSelect: () => setDialog({ type: "icon", driveId: menu.drive.id }),
+            },
+            {
+              label: "Properties",
+              icon: <DiskIcon size={15} />,
+              onSelect: () => setDialog({ type: "properties", driveId: menu.drive.id }),
+            },
+          ]}
+        />
+      )}
+
+      {dialog?.type === "properties" && dialogDrive && (
+        <DriveProperties
+          drive={dialogDrive}
+          onChangeIcon={() =>
+            setDialog({ type: "icon", driveId: dialogDrive.id, fromProperties: true })
+          }
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.type === "icon" && dialogDrive && (
+        <DriveIconPicker
+          drive={dialogDrive}
+          onClose={() =>
+            setDialog(
+              dialog.fromProperties ? { type: "properties", driveId: dialogDrive.id } : null,
+            )
+          }
+        />
+      )}
     </div>
   );
 }
 
-/** A drive in the sidebar: its fill as a moon phase plus a meter. */
-function DriveGauge({ drive }: { drive: Drive }) {
+function navItemClass(current: boolean) {
+  return `flex h-9 items-center gap-3 rounded-[0.7rem] px-3 text-sm font-medium transition-colors duration-150 ${
+    current
+      ? "bg-(--me-selected) text-(--me-accent) shadow-[inset_0_0_0_1px_rgb(185_174_251/0.3)]"
+      : "text-(--me-text-muted) hover:bg-(--me-hover) hover:text-(--me-text)"
+  }`;
+}
+
+/**
+ * A drive in the sidebar: its icon (by default its fill as a moon phase)
+ * plus a meter. Right-click, Shift+F10 or the Menu key opens its menu.
+ */
+function DriveGauge({
+  drive,
+  current,
+  onOpen,
+  onContextMenu,
+}: {
+  drive: Drive;
+  current: boolean;
+  onOpen: () => void;
+  onContextMenu: (e: MouseEvent<HTMLButtonElement>) => void;
+}) {
   const fraction = drive.used / drive.total;
   return (
-    <button type="button" className="me-inset flex items-center gap-3 px-3 py-2 text-left">
-      <MoonPhase fraction={fraction} size={30} />
+    <button
+      type="button"
+      data-drive={drive.id}
+      aria-current={current ? "page" : undefined}
+      onClick={onOpen}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu(e);
+      }}
+      className={`me-inset flex items-center gap-3 px-3 py-1.5 text-left ${
+        current ? "shadow-[inset_0_0_0_1px_rgb(185_174_251/0.45)]" : ""
+      }`}
+    >
+      <DriveIcon drive={drive} size={30} gauge />
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">
           {drive.label} <span className="text-(--me-text-faint)">({drive.letter})</span>

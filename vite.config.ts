@@ -25,5 +25,8 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     css: true,
     reporters: ["default"],
+    // The first render of the whole app in jsdom takes ~4s (CSS included),
+    // which is too close to the 5s default on a busy machine.
+    testTimeout: 20_000,
   },
 });

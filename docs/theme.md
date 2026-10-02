@@ -96,6 +96,9 @@ with Moon Explorer's `me` prefix.
 New for Moon Explorer are the **file-kind colors** `--me-kind-{folder,image,media,code,archive,file}`.
 They reuse the palette in the same way as Moon-Task's owner colors: lavender, sky, peach, mint, warning, and muted cream. They always appear next to a name or type label, so color is never the only signal.
 
+The **drive icon tints** `--me-tint-{lavender,sky,mint,peach,gold,rose}` are the colors a user can give a custom drive icon (see [drive-icons.md](drive-icons.md)).
+At night they are the palette colors; in the day theme they are the darker variants that the file-kind colors use, so a tinted icon stays readable on white.
+
 ## Background and decoration
 
 - **Night background:** three radial glows (lavender 16% top right, violet-700 55% top left, sky 8% bottom) over `linear-gradient(180deg, night-900, night-950 70%)`, fixed. (all three)
@@ -133,16 +136,18 @@ They reuse the palette in the same way as Moon-Task's owner colors: lavender, sk
 `.me-glass`, `.me-popover`, `.me-inset`, `.me-title`, `.me-eyebrow`,
 `.me-btn` (+ `-primary`, `-ghost`, `-danger`, `-sm`, `-icon`), `.me-icon-btn`,
 `.me-input`, `.me-crumb`, `.me-chip` (+ `-mint`, `-warning`, `-danger`, `-muted`),
-`.me-table`, `.me-meter`, `.me-switch`, `.me-kbd`, and `.me-titlebar`.
+`.me-table`, `.me-meter`, `.me-switch`, `.me-kbd`, `.me-titlebar`,
+`.me-menu-item`, `.me-icon-choice` and `.me-swatch`.
 
 Each one is a straight port of the Moon-Task or Moon-Browser class with the same name.
-`.me-titlebar` is the only new class. It is the drag region for a frameless window, following Moon-Terminal and Moon-Browser.
+`.me-titlebar` is new. It is the drag region for a frameless window, following Moon-Terminal and Moon-Browser.
+The drive icon picker added `.me-menu-item` (a context menu row), `.me-icon-choice` (a gallery tile) and `.me-swatch` (a round tint swatch). They use the same tokens, radii and motion as the other controls.
 
 The React pieces in `src/theme/` are:
 
 - `Sky.tsx`: the decorative sky (Moon-Task, Moon-Browser)
 - `MoonPhase.tsx`: the moon gauge, used here to show drive fill (Moon-Task)
-- `icons.tsx`: a 24px grid with 2px round strokes and `currentColor`; it reuses Moon-Browser and Moon-Task paths where they exist
+- `icons.tsx`: a 24px grid with 2px round strokes and `currentColor`; it reuses Moon-Browser and Moon-Task paths where they exist. It also holds the drive icon gallery (moon phases, planet, rocket, …), drawn on the same grid
 - `useTheme.ts`: the `dark | light | system` choice applied as `data-theme` (Moon-Task's `resolveTheme`)
 - `frame-colors.ts`: native frame and window-button colors (Moon-Browser's `FRAME_COLORS`)
 
