@@ -1,0 +1,713 @@
+@import "tailwindcss";
+
+/*
+ * Moon Explorer design tokens — the same night-sky palette as MoonDisk,
+ * MoonTask and Moon Browser (see docs/theme.md for where each value
+ * comes from).
+ *
+ * Tailwind v4 is configured CSS-first: `@theme` below is the single source
+ * of truth for Tailwind's generated utility classes (bg-lavender-400, …).
+ * Keep it identical to the sibling apps so every Moon app is one family.
+ *
+ * The semantic custom properties further down (--me-*) are the ones
+ * components reach for; they carry the night/day switch and keep intent
+ * ("this is a surface") separate from the raw palette.
+ */
+@theme {
+  --color-night-950: #0b0920;
+  --color-night-900: #141030;
+  --color-night-800: #1d1742;
+  --color-violet-700: #3b2e6b;
+  --color-lavender-400: #b9aefb;
+  --color-lavender-300: #d6cffd;
+  --color-moon-100: #f4f1ff;
+  --color-mint-400: #7fe3c6;
+  --color-sky-300: #9ad7f5;
+  --color-peach-300: #f7b89a;
+  --color-cream-100: #fbf7f0;
+  --color-success-400: #7fe3c6;
+  --color-warning-400: #f3c766;
+  --color-error-500: #e5626b;
+
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+
+  --font-mono:
+    ui-monospace, "Cascadia Code", "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  color-scheme: dark;
+
+  --me-bg: var(--color-night-950);
+  --me-text: var(--color-cream-100);
+  --me-text-muted: color-mix(in srgb, var(--color-cream-100) 62%, transparent);
+  --me-text-faint: color-mix(in srgb, var(--color-cream-100) 40%, transparent);
+  --me-border: color-mix(in srgb, var(--color-lavender-400) 18%, transparent);
+  --me-border-strong: color-mix(in srgb, var(--color-lavender-400) 36%, transparent);
+  --me-accent: var(--color-lavender-300);
+  --me-focus-ring: var(--color-lavender-300);
+  --me-glass-top: color-mix(in srgb, var(--color-night-800) 62%, transparent);
+  --me-glass-bottom: color-mix(in srgb, var(--color-night-900) 70%, transparent);
+  --me-solid: var(--color-night-900);
+  --me-popover: #181338;
+  --me-inset: color-mix(in srgb, var(--color-night-950) 55%, transparent);
+  --me-hover: rgb(255 255 255 / 0.04);
+  --me-selected: color-mix(in srgb, var(--color-lavender-400) 15%, transparent);
+  --me-warning: var(--color-warning-400);
+  --me-danger: #f28b92;
+  --me-success: var(--color-mint-400);
+
+  /* The window frame (custom title bar) — same values as Moon Browser's
+   * tab strip, so the native window buttons match (frame-colors.ts). */
+  --me-frame: #0b0920;
+  --me-toolbar: #141030;
+
+  /* File kinds in the list (always paired with a name / type label). */
+  --me-kind-folder: var(--color-lavender-400);
+  --me-kind-image: var(--color-sky-300);
+  --me-kind-media: var(--color-peach-300);
+  --me-kind-code: var(--color-mint-400);
+  --me-kind-archive: var(--color-warning-400);
+  --me-kind-file: color-mix(in srgb, var(--color-cream-100) 55%, transparent);
+
+  /* Tints a user can give a drive icon (drive-icons/builtins.ts). */
+  --me-tint-lavender: var(--color-lavender-400);
+  --me-tint-sky: var(--color-sky-300);
+  --me-tint-mint: var(--color-mint-400);
+  --me-tint-peach: var(--color-peach-300);
+  --me-tint-gold: var(--color-warning-400);
+  --me-tint-rose: #f28b92;
+
+  --me-motion: 180ms;
+}
+
+/* Day theme — the default is the night theme. The same selectors apply
+ * for an explicit choice and for "follow the system". */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --me-bg: #f5f2fb;
+  --me-text: #1c1733;
+  --me-text-muted: color-mix(in srgb, #1c1733 64%, transparent);
+  --me-text-faint: color-mix(in srgb, #1c1733 42%, transparent);
+  --me-border: color-mix(in srgb, var(--color-violet-700) 16%, transparent);
+  --me-border-strong: color-mix(in srgb, var(--color-violet-700) 32%, transparent);
+  --me-accent: #5b4bc4;
+  --me-focus-ring: #6c5ce0;
+  --me-glass-top: rgb(255 255 255 / 0.82);
+  --me-glass-bottom: rgb(255 255 255 / 0.7);
+  --me-solid: #ffffff;
+  --me-popover: #ffffff;
+  --me-inset: color-mix(in srgb, var(--color-violet-700) 5%, white);
+  --me-hover: color-mix(in srgb, var(--color-violet-700) 5%, transparent);
+  --me-selected: color-mix(in srgb, #7d6de0 14%, transparent);
+  --me-warning: #a86b00;
+  --me-danger: #c2323d;
+  --me-success: #1d7d65;
+
+  --me-frame: #ece7f7;
+  --me-toolbar: #f7f4fd;
+
+  --me-kind-folder: #7d6de0;
+  --me-kind-image: #2f86b5;
+  --me-kind-media: #c7663b;
+  --me-kind-code: #1d7d65;
+  --me-kind-archive: #a86b00;
+  --me-kind-file: color-mix(in srgb, #1c1733 50%, transparent);
+
+  --me-tint-lavender: #7d6de0;
+  --me-tint-sky: #2f86b5;
+  --me-tint-mint: #1d7d65;
+  --me-tint-peach: #c7663b;
+  --me-tint-gold: #a86b00;
+  --me-tint-rose: #c2323d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --me-motion: 0ms;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html {
+  background: var(--me-bg);
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 80% 55% at 85% -5%,
+      color-mix(in srgb, var(--color-lavender-400) 16%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 60% at 0% 0%,
+      color-mix(in srgb, var(--color-violet-700) 55%, transparent),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 90% 50% at 50% 115%,
+      color-mix(in srgb, var(--color-sky-300) 8%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(180deg, var(--color-night-900) 0%, var(--color-night-950) 70%);
+  background-attachment: fixed;
+  color: var(--me-text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI Variable Text",
+    "Segoe UI",
+    Roboto,
+    "Noto Sans",
+    sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(
+      ellipse 80% 55% at 85% -5%,
+      color-mix(in srgb, var(--color-lavender-400) 28%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(180deg, #f7f4fd 0%, #eee9f8 100%);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-lavender-400) 40%, transparent);
+}
+
+/* A visible keyboard focus is a must. */
+:focus-visible {
+  outline: 2px solid var(--me-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Quiet scrollbars that match the night sky. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-lavender-400) 28%, transparent) transparent;
+}
+
+/* ---- Night sky: stars + moon, purely decorative ---- */
+
+.me-sky {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.me-sky::before,
+.me-sky::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+}
+
+.me-sky::before {
+  background-image:
+    radial-gradient(1.5px 1.5px at 23px 41px, rgb(255 255 255 / 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 142px 88px, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 251px 17px, rgb(214 207 253 / 0.9), transparent),
+    radial-gradient(1.5px 1.5px at 67px 196px, rgb(255 255 255 / 0.55), transparent),
+    radial-gradient(1.5px 1.5px at 199px 243px, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 297px 158px, rgb(154 215 245 / 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 111px 281px, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 309px 300px, rgb(214 207 253 / 0.6), transparent);
+  background-size: 320px 320px;
+}
+
+.me-sky::after {
+  background-image:
+    radial-gradient(2px 2px at 60px 90px, rgb(255 255 255 / 0.95), transparent),
+    radial-gradient(2.5px 2.5px at 380px 210px, rgb(214 207 253 / 0.95), transparent),
+    radial-gradient(2px 2px at 250px 460px, rgb(255 255 255 / 0.9), transparent),
+    radial-gradient(2.5px 2.5px at 470px 40px, rgb(255 255 255 / 0.95), transparent);
+  background-size: 540px 540px;
+  /* Like MoonTask, the stars don't twinkle: a file explorer stays open all
+   * day, and a full-window opacity animation costs CPU for nothing. */
+  opacity: 0.8;
+}
+
+:root[data-theme="light"] .me-sky::before,
+:root[data-theme="light"] .me-sky::after {
+  opacity: 0;
+}
+
+.me-moon {
+  position: absolute;
+  top: -70px;
+  right: -40px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  box-shadow:
+    inset -46px 22px 0 0 color-mix(in srgb, var(--color-moon-100) 92%, transparent),
+    0 0 90px -20px color-mix(in srgb, var(--color-lavender-400) 45%, transparent);
+  opacity: 0.4;
+  transform: rotate(-12deg);
+}
+
+:root[data-theme="light"] .me-moon {
+  box-shadow:
+    inset -46px 22px 0 0 color-mix(in srgb, var(--color-lavender-400) 55%, transparent),
+    0 0 90px -20px color-mix(in srgb, var(--color-lavender-400) 45%, transparent);
+}
+
+/* ---- Reusable surfaces and controls ---- */
+
+@layer components {
+  .me-glass {
+    background: linear-gradient(180deg, var(--me-glass-top), var(--me-glass-bottom));
+    border: 1px solid var(--me-border);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.05),
+      0 24px 60px -30px rgb(0 0 0 / 0.55);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+
+  .me-popover {
+    background: var(--me-popover);
+    border: 1px solid var(--me-border-strong);
+    border-radius: 0.9rem;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.05),
+      0 18px 50px -12px rgb(0 0 0 / 0.6);
+  }
+
+  :root[data-theme="light"] .me-popover {
+    box-shadow: 0 18px 50px -14px rgb(43 33 96 / 0.35);
+  }
+
+  .me-inset {
+    background: var(--me-inset);
+    border: 1px solid color-mix(in srgb, var(--color-lavender-400) 12%, transparent);
+    border-radius: var(--radius-md);
+  }
+
+  .me-title {
+    background: linear-gradient(
+      100deg,
+      var(--color-moon-100) 0%,
+      var(--color-lavender-300) 45%,
+      var(--color-lavender-400) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  :root[data-theme="light"] .me-title {
+    background: linear-gradient(100deg, #2b2160 0%, #5b4bc4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  .me-eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--me-accent) 75%, transparent);
+  }
+
+  /* Custom title bar of the frameless window (Moon Terminal, Moon Browser). */
+  .me-titlebar {
+    -webkit-app-region: drag;
+    app-region: drag;
+    user-select: none;
+    background: var(--me-frame);
+    border-bottom: 1px solid var(--me-border);
+  }
+  .me-titlebar button,
+  .me-titlebar input {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+
+  .me-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    height: 2rem;
+    padding: 0 0.8rem;
+    border-radius: 0.65rem;
+    border: 1px solid transparent;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    white-space: nowrap;
+    cursor: pointer;
+    color: var(--me-text);
+    background: transparent;
+    transition:
+      background-color var(--me-motion),
+      border-color var(--me-motion),
+      box-shadow var(--me-motion),
+      filter var(--me-motion);
+  }
+  .me-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .me-btn-sm {
+    height: 1.75rem;
+    padding: 0 0.6rem;
+    font-size: 0.75rem;
+  }
+  .me-btn-icon {
+    width: 2rem;
+    padding: 0;
+  }
+
+  .me-btn-primary {
+    background: linear-gradient(135deg, var(--color-lavender-300), #a597f5);
+    color: var(--color-night-950);
+    box-shadow: 0 8px 24px -10px color-mix(in srgb, var(--color-lavender-400) 80%, transparent);
+  }
+  .me-btn-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+
+  .me-btn-ghost {
+    background: var(--me-hover);
+    border-color: color-mix(in srgb, var(--color-lavender-400) 22%, transparent);
+  }
+  .me-btn-ghost:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-lavender-400) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-lavender-400) 42%, transparent);
+  }
+  .me-btn-ghost[aria-pressed="true"] {
+    background: var(--me-selected);
+    border-color: color-mix(in srgb, var(--color-lavender-400) 50%, transparent);
+    color: var(--me-accent);
+  }
+
+  .me-btn-danger {
+    background: color-mix(in srgb, var(--color-error-500) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-error-500) 45%, transparent);
+    color: var(--me-danger);
+  }
+  .me-btn-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-error-500) 18%, transparent);
+  }
+
+  /* Borderless square icon buttons of the toolbar. */
+  .me-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    border-radius: 0.65rem;
+    border: 0;
+    background: transparent;
+    color: var(--me-text-muted);
+    cursor: pointer;
+    transition:
+      background-color var(--me-motion),
+      color var(--me-motion);
+  }
+  .me-icon-btn:hover:not(:disabled),
+  .me-icon-btn[aria-expanded="true"] {
+    background: color-mix(in srgb, var(--color-lavender-400) 8%, transparent);
+    color: var(--me-text);
+  }
+  .me-icon-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .me-icon-btn[aria-pressed="true"] {
+    color: var(--me-accent);
+  }
+
+  .me-input {
+    height: 2rem;
+    padding: 0 0.7rem;
+    border-radius: 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--color-lavender-400) 20%, transparent);
+    background: var(--me-inset);
+    color: var(--me-text);
+    font: inherit;
+    font-size: 0.8125rem;
+    transition:
+      border-color var(--me-motion),
+      box-shadow var(--me-motion);
+  }
+  .me-input::placeholder {
+    color: var(--me-text-faint);
+  }
+  .me-input:hover:not(:disabled) {
+    border-color: var(--me-border-strong);
+  }
+  .me-input:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--color-lavender-400) 70%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-lavender-400) 20%, transparent);
+  }
+  select.me-input option {
+    background: var(--me-solid);
+    color: var(--me-text);
+  }
+
+  /* Breadcrumb segments of the path bar (Moon Browser's bookmark folders). */
+  .me-crumb {
+    padding: 0.2rem 0.5rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--me-text-muted);
+    font: inherit;
+    cursor: pointer;
+  }
+  .me-crumb:hover {
+    background: var(--me-hover);
+    color: var(--me-text);
+  }
+  .me-crumb[aria-current="page"] {
+    color: var(--me-text);
+    font-weight: 600;
+  }
+
+  .me-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 1.25rem;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    background: color-mix(in srgb, var(--color-lavender-400) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-lavender-400) 20%, transparent);
+    color: var(--me-accent);
+  }
+  .me-chip-mint {
+    background: color-mix(in srgb, var(--color-mint-400) 10%, transparent);
+    border-color: color-mix(in srgb, var(--color-mint-400) 28%, transparent);
+    color: var(--me-success);
+  }
+  .me-chip-warning {
+    background: color-mix(in srgb, var(--color-warning-400) 10%, transparent);
+    border-color: color-mix(in srgb, var(--color-warning-400) 30%, transparent);
+    color: var(--me-warning);
+  }
+  .me-chip-danger {
+    background: color-mix(in srgb, var(--color-error-500) 10%, transparent);
+    border-color: color-mix(in srgb, var(--color-error-500) 30%, transparent);
+    color: var(--me-danger);
+  }
+  .me-chip-muted {
+    background: transparent;
+    border-color: var(--me-border);
+    color: var(--me-text-muted);
+  }
+
+  /* Dense data tables (the file list) — MoonTask's process table. */
+  .me-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .me-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    height: 2.1rem;
+    padding: 0 0.6rem;
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--me-text-muted);
+    background: var(--me-solid);
+    border-bottom: 1px solid var(--me-border);
+    white-space: nowrap;
+  }
+  .me-table tbody td {
+    height: 1.875rem;
+    padding: 0 0.6rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-lavender-400) 6%, transparent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0;
+  }
+  .me-table tbody tr {
+    transition: background-color 120ms;
+  }
+  .me-table tbody tr:hover {
+    background: var(--me-hover);
+  }
+  .me-table tbody tr[aria-selected="true"] {
+    background: var(--me-selected);
+    box-shadow: inset 2px 0 0 0 var(--me-accent);
+  }
+
+  .me-meter {
+    height: 0.3rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-lavender-400) 14%, transparent);
+    overflow: hidden;
+  }
+  .me-meter > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #8676e3, var(--color-lavender-300));
+  }
+  .me-meter[data-tone="warning"] > span {
+    background: linear-gradient(90deg, #d9a640, var(--color-warning-400));
+  }
+
+  /* A switch: a checkbox that looks like a small moon sliding along. */
+  .me-switch {
+    appearance: none;
+    position: relative;
+    width: 2.25rem;
+    height: 1.3rem;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-lavender-400) 16%, transparent);
+    border: 1px solid var(--me-border-strong);
+    cursor: pointer;
+    transition: background-color var(--me-motion);
+  }
+  .me-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(1.3rem - 6px);
+    height: calc(1.3rem - 6px);
+    border-radius: 50%;
+    background: var(--me-text-muted);
+    transition:
+      transform var(--me-motion),
+      background-color var(--me-motion);
+  }
+  .me-switch:checked {
+    background: linear-gradient(135deg, var(--color-lavender-300), #a597f5);
+    border-color: transparent;
+  }
+  .me-switch:checked::after {
+    transform: translateX(0.95rem);
+    background: var(--color-night-950);
+  }
+
+  .me-kbd {
+    display: inline-flex;
+    align-items: center;
+    height: 1.15rem;
+    padding: 0 0.3rem;
+    border-radius: 0.3rem;
+    border: 1px solid var(--me-border);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--me-text-muted);
+  }
+
+  /* Items of a context menu (Moon Browser's menu rows). */
+  .me-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 2rem;
+    padding: 0 0.65rem;
+    border: 0;
+    border-radius: 0.55rem;
+    background: transparent;
+    color: var(--me-text);
+    font: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .me-menu-item:hover,
+  .me-menu-item:focus-visible {
+    background: var(--me-selected);
+    outline: none;
+  }
+
+  /* A tile in the drive icon gallery (a radio). */
+  .me-icon-choice {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    border-radius: 0.7rem;
+    border: 1px solid transparent;
+    background: var(--me-hover);
+    color: var(--me-text-muted);
+    cursor: pointer;
+    transition:
+      background-color var(--me-motion),
+      border-color var(--me-motion),
+      color var(--me-motion);
+  }
+  .me-icon-choice:hover {
+    background: color-mix(in srgb, var(--color-lavender-400) 12%, transparent);
+    color: var(--me-text);
+  }
+  .me-icon-choice[aria-checked="true"] {
+    background: var(--me-selected);
+    border-color: color-mix(in srgb, var(--color-lavender-400) 60%, transparent);
+    color: var(--me-accent);
+  }
+
+  /* A round color swatch (a radio); the color comes in as `color`. */
+  .me-swatch {
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border-radius: 999px;
+    border: 2px solid var(--me-solid);
+    background: currentColor;
+    box-shadow: 0 0 0 1px var(--me-border-strong);
+    cursor: pointer;
+    transition: box-shadow var(--me-motion);
+  }
+  .me-swatch[data-none] {
+    color: var(--me-text-faint);
+    background: linear-gradient(
+      135deg,
+      transparent calc(50% - 1px),
+      currentColor calc(50% - 1px) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    );
+  }
+  .me-swatch[aria-checked="true"] {
+    box-shadow: 0 0 0 2px var(--me-accent);
+  }
+  .me-swatch:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
