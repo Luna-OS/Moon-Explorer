@@ -33,13 +33,14 @@ import { DriveIconPicker } from "@/drive-icons/DriveIconPicker";
 import { ContextMenu } from "@/ui/ContextMenu";
 import { anchorFromEvent, type MenuAnchor, type MenuEntry } from "@/ui/menu";
 import { defaultBridge } from "@/fs/bridge";
-import { formatBytes, plural } from "@/fs/format";
+import { formatBytes, formatCapacity, plural } from "@/fs/format";
 import { isRoot, samePath } from "@/fs/paths";
 import type { FsDrive, MoonBridge } from "@/fs/types";
 import { focusList, handleShortcut, openSettings, setView } from "@/explorer/commands";
 import { Dialogs } from "@/explorer/Dialogs";
 import { CommandPalette, QuickLook, TaskStatus, Toasts } from "@/explorer/Overlays";
 import { PaneView } from "@/explorer/PaneView";
+import { RefreshDrivesButton } from "@/explorer/ThisPcView";
 import { PreviewPanel } from "@/explorer/Preview";
 import { useStore } from "@/explorer/model/store";
 import { Workspace, type Tab } from "@/explorer/model/workspace";
@@ -112,6 +113,20 @@ export default function App({ bridge }: { bridge?: MoonBridge }) {
   useEffect(() => {
     void ws.bridge.setTheme(theme).catch(() => {});
   }, [ws, theme]);
+
+  // Free space changes outside the app too: check again when the window comes back to the front,
+  // and once a minute while it is visible.
+  useEffect(() => {
+    const onFocus = () => ws.refreshDrivesSoon();
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") ws.refreshDrivesSoon(60_000);
+    }, 60_000);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      clearInterval(timer);
+    };
+  }, [ws]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -329,7 +344,13 @@ export default function App({ bridge }: { bridge?: MoonBridge }) {
           </nav>
 
           <section aria-label="Drives" className="flex flex-col gap-1.5">
-            <div className="me-eyebrow px-3">Drives</div>
+            <div className="flex items-center justify-between pr-1 pl-3">
+              <span className="me-eyebrow">Drives</span>
+              <RefreshDrivesButton
+                refreshing={ws.drivesRefreshing}
+                onRefresh={() => void ws.refreshDrives()}
+              />
+            </div>
             <button
               type="button"
               data-place="this-pc"
@@ -505,7 +526,7 @@ export default function App({ bridge }: { bridge?: MoonBridge }) {
             <TaskStatus ws={ws} />
             {drive && (
               <span className="ml-auto">
-                {formatBytes(drive.total - drive.used, 0)} free on {ws.driveLabel(drive)}
+                {formatCapacity(drive.total - drive.used)} free on {ws.driveLabel(drive)}
               </span>
             )}
           </footer>
@@ -737,7 +758,7 @@ function DriveGauge({
         </div>
         <div className="mt-1 text-[0.6875rem] text-(--me-text-muted) tabular-nums">
           {drive.total
-            ? `${formatBytes(drive.total - drive.used, 0)} free of ${formatBytes(drive.total, 0)}`
+            ? `${formatCapacity(drive.total - drive.used)} free of ${formatCapacity(drive.total)}`
             : "Not ready"}
         </div>
       </div>

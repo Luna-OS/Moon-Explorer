@@ -214,25 +214,54 @@ const sameDir = (a, b) => path.resolve(a).toLowerCase() === path.resolve(b).toLo
 
 // ---------------------------------------------------------------- drives and places
 
+// Size and free space come from .NET DriveInfo (GetDiskFreeSpaceEx, the numbers Windows Explorer shows:
+// space available to this user); the label, serial and type from Win32_LogicalDisk.
+const DRIVE_INFO_SCRIPT = `
+$ErrorActionPreference = 'SilentlyContinue'
+$cim = @{}
+Get-CimInstance Win32_LogicalDisk | ForEach-Object { $cim[$_.DeviceID.ToUpper()] = $_ }
+@([System.IO.DriveInfo]::GetDrives() | ForEach-Object {
+  $id = $_.Name.Substring(0, 2).ToUpper()
+  $c = $cim[$id]
+  $ready = $_.IsReady
+  [pscustomobject]@{
+    DeviceID = $id
+    VolumeName = $(if ($ready -and $_.VolumeLabel) { $_.VolumeLabel } else { $c.VolumeName })
+    VolumeSerialNumber = $c.VolumeSerialNumber
+    DriveType = $c.DriveType
+    Size = $(if ($ready) { $_.TotalSize } else { $c.Size })
+    FreeSpace = $(if ($ready) { $_.AvailableFreeSpace } else { $c.FreeSpace })
+  }
+}) | ConvertTo-Json -Compress
+`;
+
+/** The last answer of DRIVE_INFO_SCRIPT, and the query in flight (at most one at a time). */
+let driveInfo = null;
 let driveInfoPromise = null;
 function loadDriveInfo() {
-  driveInfoPromise = powershell(
-    "Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,VolumeName,VolumeSerialNumber,DriveType,Size,FreeSpace | ConvertTo-Json -Compress",
-  ).then(({ stdout }) => {
-    try {
+  if (driveInfoPromise) return driveInfoPromise;
+  driveInfoPromise = powershell(DRIVE_INFO_SCRIPT)
+    .then(({ stdout }) => {
       const data = JSON.parse(stdout.trim() || "[]");
-      return new Map([].concat(data).map((d) => [String(d.DeviceID).toUpperCase(), d]));
-    } catch {
-      return new Map();
-    }
-  });
+      driveInfo = new Map([].concat(data).map((d) => [String(d.DeviceID).toUpperCase(), d]));
+      return driveInfo;
+    })
+    .catch(() => driveInfo ?? new Map())
+    .finally(() => {
+      driveInfoPromise = null;
+    });
   return driveInfoPromise;
 }
 
-/** Drives in the shape of the UI's Drive type (src/explorer/sample.ts), plus the root path. */
-async function listDrives() {
-  const timeout = new Promise((r) => setTimeout(() => r(new Map()), 2500));
-  const info = await Promise.race([driveInfoPromise || loadDriveInfo(), timeout]);
+/**
+ * Drives in the shape of the UI's Drive type (src/explorer/sample.ts), plus the root path.
+ * `fresh` asks Windows again (after a refresh, or when space may have changed); otherwise the last
+ * answer is reused. A slow answer falls back to the last one, so a refresh never shows less.
+ */
+async function listDrives({ fresh = false } = {}) {
+  const pending = !driveInfo || fresh ? loadDriveInfo() : Promise.resolve(driveInfo);
+  const timeout = new Promise((r) => setTimeout(() => r(null), driveInfo ? 8000 : 15000));
+  const info = (await Promise.race([pending, timeout])) ?? driveInfo ?? new Map();
   const systemLetter = (process.env.SystemDrive || "C:").toUpperCase();
   const drives = [];
   for (let c = 65; c <= 90; c++) {
@@ -242,7 +271,8 @@ async function listDrives() {
     if (!meta && !fs.existsSync(root)) continue;
     let total = meta ? Number(meta.Size) || 0 : 0;
     let free = meta ? Number(meta.FreeSpace) || 0 : 0;
-    if (!total) {
+    if (!meta) {
+      // Only when Windows gave no answer for this drive at all.
       try {
         const s = await fsp.statfs(root);
         total = s.blocks * s.bsize;
@@ -659,10 +689,7 @@ function handle(channel, fn) {
 function registerIpc() {
   handle("sys:places", places);
   handle("sys:drives", listDrives);
-  handle("sys:refreshDrives", () => {
-    loadDriveInfo();
-    return listDrives();
-  });
+  handle("sys:refreshDrives", () => listDrives({ fresh: true }));
   handle("sys:env", () => ({ ...process.env }));
   handle("sys:takeStart", () => {
     const s = pendingStart;

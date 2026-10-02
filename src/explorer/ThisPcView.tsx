@@ -1,25 +1,59 @@
 import type { MouseEvent } from "react";
 import { DriveIcon } from "@/drive-icons/DriveIcon";
-import { DRIVE_KIND_LABELS, formatBytes, type Drive } from "./sample";
+import { formatCapacity } from "@/fs/format";
+import { ReloadIcon } from "@/theme/icons";
+import { DRIVE_KIND_LABELS, type Drive } from "./sample";
+
+/** Asks Windows again for the drives' size and free space; spins while it does. */
+export function RefreshDrivesButton({
+  refreshing,
+  onRefresh,
+}: {
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="me-icon-btn h-6 w-6"
+      aria-label="Refresh drives"
+      title="Refresh drives"
+      aria-busy={refreshing}
+      disabled={refreshing}
+      onClick={onRefresh}
+    >
+      <span className={refreshing ? "inline-flex motion-safe:animate-spin" : "inline-flex"}>
+        <ReloadIcon size={13} />
+      </span>
+    </button>
+  );
+}
 
 /** "This PC": every drive as a card with its icon and how full it is. */
 export function ThisPcView({
   drives,
   onOpen,
   onContextMenu,
+  refreshing = false,
+  onRefresh,
 }: {
   drives: Drive[];
   onOpen: (drive: Drive) => void;
   onContextMenu: (drive: Drive, e: MouseEvent<HTMLButtonElement>) => void;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   return (
     <section aria-labelledby="this-pc-drives" className="p-4">
-      <h3 id="this-pc-drives" className="me-eyebrow mb-3 px-1">
-        Devices and drives
-      </h3>
+      <div className="mb-3 flex items-center gap-2 px-1">
+        <h3 id="this-pc-drives" className="me-eyebrow m-0">
+          Devices and drives
+        </h3>
+        {onRefresh && <RefreshDrivesButton refreshing={refreshing} onRefresh={onRefresh} />}
+      </div>
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
         {drives.map((drive) => {
-          const fraction = drive.used / drive.total;
+          const fraction = drive.total ? drive.used / drive.total : 0;
           return (
             <li key={drive.id}>
               <button
@@ -52,7 +86,9 @@ export function ThisPcView({
                     <span style={{ width: `${fraction * 100}%` }} />
                   </span>
                   <span className="mt-1 block text-[0.6875rem] text-(--me-text-muted) tabular-nums">
-                    {formatBytes(drive.total - drive.used, 0)} free of {formatBytes(drive.total, 0)}
+                    {drive.total
+                      ? `${formatCapacity(drive.total - drive.used)} free of ${formatCapacity(drive.total)}`
+                      : "Not ready"}
                   </span>
                 </span>
               </button>

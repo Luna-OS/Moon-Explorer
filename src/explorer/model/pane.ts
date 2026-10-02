@@ -41,6 +41,8 @@ export interface PaneHost {
   onSelection(pane: PaneModel): void;
   registerSearch(id: string, pane: PaneModel | null): void;
   reportError(message: string): void;
+  /** Asks Windows again for the drives' size and free space (This PC shows them). */
+  refreshDrives(): Promise<void>;
 }
 
 let paneSeq = 0;
@@ -269,6 +271,8 @@ export class PaneModel extends Store {
     }
     const path = this.path;
     if (!path) {
+      // This PC: its content is the drives.
+      void this.host.refreshDrives();
       this.changed();
       return;
     }

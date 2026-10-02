@@ -78,6 +78,8 @@ export function StartView({
         drives={ws.drives}
         onOpen={(d) => void pane.go((d as FsDrive).path)}
         onContextMenu={(d, e) => onDriveMenu(d as FsDrive, e)}
+        refreshing={ws.drivesRefreshing}
+        onRefresh={() => void ws.refreshDrives()}
       />
       {recent.length > 0 && (
         <section aria-labelledby="start-recent" className="px-4 pb-4">

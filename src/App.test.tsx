@@ -150,3 +150,17 @@ describe("resolveTheme", () => {
     expect(resolveTheme("dark", true)).toBe("dark");
   });
 });
+
+describe("drive space", () => {
+  it("refreshes the drives' free space from the sidebar", async () => {
+    const bridge = new DemoBridge();
+    const GB = 1024 ** 3;
+    bridge.refreshDrives = async () =>
+      (await bridge.drives()).map((d) => (d.id === "c" ? { ...d, used: d.total - 145 * GB } : d));
+    await renderApp(bridge);
+    const drives = screen.getByRole("region", { name: "Drives" });
+    expect(within(drives).queryByText(/^145 GB free of/)).not.toBeInTheDocument();
+    fireEvent.click(within(drives).getByRole("button", { name: "Refresh drives" }));
+    expect(await within(drives).findByText("145 GB free of 931 GB")).toBeInTheDocument();
+  });
+});
