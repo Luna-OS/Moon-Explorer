@@ -65,6 +65,7 @@
     },
     "files": [
       "electron/**/*",
+      "!electron/**/test/**",
       "dist/**/*",
       "build/icon.png",
       "build/drag.png",
@@ -84,6 +85,13 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "Moon Explorer",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "uninstallDisplayName": "Moon Explorer",
+      "menuCategory": false,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
       "artifactName": "Moon-Explorer-Setup-${version}.${ext}"
     }
   }

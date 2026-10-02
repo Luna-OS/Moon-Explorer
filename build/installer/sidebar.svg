@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="164" height="314" viewBox="0 0 164 314">
+  <!-- The installer's welcome / finish page picture (installerSidebar.bmp, 164 × 314).
+       Rendered by `npm run icons`; LOGO is replaced with public/moon-explorer-logo.svg. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2060"/>
+      <stop offset="0.6" stop-color="#141030"/>
+      <stop offset="1" stop-color="#0b0920"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.3" r="0.6">
+      <stop offset="0" stop-color="#b9aefb" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#b9aefb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mint" cx="0.5" cy="1" r="0.7">
+      <stop offset="0" stop-color="#7fe3c6" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#7fe3c6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="164" height="314" fill="url(#sky)"/>
+  <rect width="164" height="314" fill="url(#glow)"/>
+  <rect y="214" width="164" height="100" fill="url(#mint)"/>
+  <g fill="#f4f1ff">
+    <circle cx="18" cy="22" r="1.1" opacity="0.9"/>
+    <circle cx="52" cy="12" r="0.8" opacity="0.6"/>
+    <circle cx="140" cy="18" r="1.3" opacity="0.9"/>
+    <circle cx="118" cy="44" r="0.8" opacity="0.5"/>
+    <circle cx="28" cy="64" r="0.9" opacity="0.7"/>
+    <circle cx="150" cy="80" r="0.8" opacity="0.6"/>
+    <circle cx="12" cy="140" r="1" opacity="0.6"/>
+    <circle cx="154" cy="156" r="1.1" opacity="0.7"/>
+    <circle cx="24" cy="236" r="0.8" opacity="0.5"/>
+    <circle cx="142" cy="250" r="0.9" opacity="0.5"/>
+    <circle cx="70" cy="290" r="0.8" opacity="0.4"/>
+    <circle cx="120" cy="300" r="1" opacity="0.4"/>
+  </g>
+  <g fill="#9ad7f5">
+    <circle cx="88" cy="30" r="1" opacity="0.7"/>
+    <circle cx="136" cy="118" r="0.9" opacity="0.6"/>
+    <circle cx="40" cy="270" r="0.9" opacity="0.5"/>
+  </g>
+  <image href="LOGO" x="38" y="58" width="88" height="88"/>
+  <text x="82" y="182" text-anchor="middle" font-family="Segoe UI, Inter, system-ui, sans-serif"
+        font-size="17" font-weight="600" fill="#f4f1ff" letter-spacing="0.2">Moon Explorer</text>
+  <text x="82" y="204" text-anchor="middle" font-family="Segoe UI, Inter, system-ui, sans-serif"
+        font-size="10.5" fill="#d6cffd" opacity="0.85">Your files, calmly</text>
+  <text x="82" y="218" text-anchor="middle" font-family="Segoe UI, Inter, system-ui, sans-serif"
+        font-size="10.5" fill="#d6cffd" opacity="0.85">under the moon.</text>
+  <path d="M0 296 Q41 284 82 290 T164 286 V314 H0 Z" fill="#0b0920" opacity="0.7"/>
+</svg>

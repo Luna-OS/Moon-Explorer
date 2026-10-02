@@ -912,8 +912,11 @@ function createWindow() {
   win.once("ready-to-show", () => {
     win.show();
     // Only the installed app: a development run would offer to register electron.exe instead.
+    // A few seconds later, so it doesn't slow the start down or race the installer's --set-default.
     if (app.isPackaged && !process.env.MOON_SHOT) {
-      void defaultFileManager.checkOnStartup(app, dialog, win);
+      setTimeout(() => {
+        if (win) void defaultFileManager.checkOnStartup(app, dialog, win);
+      }, 5000);
     }
   });
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));

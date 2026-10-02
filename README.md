@@ -24,7 +24,14 @@ This writes to `release/`:
 - `Moon-Explorer-Setup-<version>.exe`: the Windows installer (per user, no admin rights, Start menu and desktop shortcut)
 - `Moon-Explorer-<version>-win-x64.zip`: a portable build; unzip it and run `Moon Explorer.exe`
 
-`npm run icons` re-renders the app icons in `build/` from `public/moon-explorer-logo.svg`.
+The installer has the Moon look (a night-sky picture on the welcome and finish pages, the logo in the
+page header), and its last page offers **Use as default file manager**. Uninstalling gives folders back
+to Windows Explorer first. Its pages are in `build/installer.nsh`.
+
+![The installer's welcome page](docs/screenshots/installer/welcome.png)
+
+`npm run icons` re-renders the app icons in `build/` from `public/moon-explorer-logo.svg`, and the
+installer pictures (`build/*.bmp`) from `build/installer/*.svg`.
 
 ## Development
 
