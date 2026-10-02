@@ -28,3 +28,6 @@ npm-debug.log*
 # Env files
 .env
 .env.local
+
+# Desktop app packages (npm run dist)
+release/

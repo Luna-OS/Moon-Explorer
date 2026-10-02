@@ -8,7 +8,7 @@ import prettierConfig from "eslint-config-prettier";
 
 // Moon Explorer ESLint configuration (same base as MoonTask and MoonDisk).
 export default tseslint.config(
-  { ignores: ["dist", "node_modules"] },
+  { ignores: ["dist", "node_modules", "release"] },
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -43,6 +43,16 @@ export default tseslint.config(
           message: "dangerouslySetInnerHTML is not allowed. File names must always stay escaped.",
         },
       ],
+    },
+  },
+  {
+    // The Electron main process, preload and build scripts (CommonJS, Node).
+    files: ["electron/**/*.cjs", "scripts/**/*.cjs"],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+      globals: globals.node,
     },
   },
   {

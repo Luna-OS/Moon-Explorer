@@ -15,7 +15,11 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "app": "npm run build && electron .",
+    "app:dev": "node scripts/dev.cjs",
+    "dist": "npm run build && electron-builder --win",
+    "icons": "electron scripts/make-icons.cjs"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -30,6 +34,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -43,5 +49,41 @@
     "typescript-eslint": "^8.70.1",
     "vite": "^8.3.1",
     "vitest": "^5.0.1"
+  },
+  "main": "electron/main.cjs",
+  "productName": "Moon Explorer",
+  "author": "Luna",
+  "build": {
+    "appId": "os.luna.moon-explorer",
+    "productName": "Moon Explorer",
+    "executableName": "Moon Explorer",
+    "copyright": "Copyright © 2026 Luna",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "build/icon.png",
+      "build/drag.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "Moon-Explorer-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Moon Explorer",
+      "artifactName": "Moon-Explorer-Setup-${version}.${ext}"
+    }
   }
 }
