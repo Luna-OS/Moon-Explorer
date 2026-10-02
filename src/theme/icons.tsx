@@ -191,3 +191,161 @@ export const DownloadIcon = ({ size = 16 }: P) => (
     <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
   </Svg>
 );
+
+export const ComputerIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <rect x="3" y="4" width="18" height="12" rx="2" />
+    <path d="M8 20h8M12 16v4" />
+  </Svg>
+);
+
+export const EditIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z" />
+    <path d="m13.5 6.5 4 4" />
+  </Svg>
+);
+
+export const UploadIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="M12 15V4M7 9l5-5 5 5M5 20h14" />
+  </Svg>
+);
+
+export const CheckIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </Svg>
+);
+
+/* ---- Drive icon gallery (see drive-icons/builtins.ts) ---- */
+
+export const HardDriveIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="M6 4.5h12l3 7.5v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6Z" />
+    <path d="M3 12h18M7 16h.01M10.5 16h.01" />
+  </Svg>
+);
+
+export const SsdIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <rect x="3" y="6" width="18" height="12" rx="2" />
+    <path d="M7 10h6M7 14h3M17 14h.01" />
+  </Svg>
+);
+
+export const UsbIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <rect x="7" y="9" width="10" height="13" rx="2" />
+    <path d="M9 9V3h6v6M11 6h.01M13 6h.01" />
+  </Svg>
+);
+
+export const CloudIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="M7 19a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 17.9 9.6 4.75 4.75 0 0 1 17 19Z" />
+  </Svg>
+);
+
+export const NetworkIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <rect x="9" y="2.5" width="6" height="5.5" rx="1" />
+    <rect x="2.5" y="16" width="6" height="5.5" rx="1" />
+    <rect x="15.5" y="16" width="6" height="5.5" rx="1" />
+    <path d="M12 8v4M5.5 16v-2a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2" />
+  </Svg>
+);
+
+export const NewMoonIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="9" fill="currentColor" fillOpacity="0.22" />
+  </Svg>
+);
+
+export const HalfMoonIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" />
+  </Svg>
+);
+
+export const FullMoonIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="9.5" cy="9" r="1.5" />
+    <circle cx="15" cy="14" r="2" />
+    <path d="M9 16h.01" />
+  </Svg>
+);
+
+export const PlanetIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="6" />
+    <path d="M6.6 14.6C3.6 16.3 2 18 2.6 19c1 1.7 7-.2 13.4-4.2S25.4 6.6 21.4 5c-.8-.3-2 0-3.6.6" />
+  </Svg>
+);
+
+export const SparklesIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="m10 4 1.8 4.7L16.5 10.5l-4.7 1.8L10 17l-1.8-4.7-4.7-1.8 4.7-1.8Z" />
+    <path d="M18.5 15v5M16 17.5h5" />
+  </Svg>
+);
+
+export const ConstellationIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="m5.5 18 3.5-7 6 2.5 3.5-7.5" />
+    <circle cx="5.5" cy="18" r="1.5" fill="currentColor" />
+    <circle cx="9" cy="11" r="1.5" fill="currentColor" />
+    <circle cx="15" cy="13.5" r="1.5" fill="currentColor" />
+    <circle cx="18.5" cy="6" r="1.5" fill="currentColor" />
+  </Svg>
+);
+
+export const RocketIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="M12 2.5c2.9 2.4 4.5 5.8 4.5 9.8V17h-9v-4.7c0-4 1.6-7.4 4.5-9.8Z" />
+    <path d="M7.5 12.5 5 15.5V19l2.5-2M16.5 12.5l2.5 3V19l-2.5-2M10.5 20l1.5 2 1.5-2" />
+    <circle cx="12" cy="9.5" r="1.75" />
+  </Svg>
+);
+
+export const GamepadIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="M6.5 7h11a4.5 4.5 0 0 1 4.4 5.4l-.9 4.6a2.6 2.6 0 0 1-4.6 1.1L14.5 16h-5l-1.9 2.1a2.6 2.6 0 0 1-4.6-1.1l-.9-4.6A4.5 4.5 0 0 1 6.5 7Z" />
+    <path d="M7.5 10v3.5M5.75 11.75h3.5M15.5 11h.01M18 13h.01" />
+  </Svg>
+);
+
+export const FilmIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M7.5 4v16M16.5 4v16M3 9h4.5M3 15h4.5M16.5 9H21M16.5 15H21" />
+  </Svg>
+);
+
+export const BookIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="M5 19V5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2 2 2 0 0 0 2 2h12" />
+  </Svg>
+);
+
+export const BriefcaseIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <rect x="3" y="7" width="18" height="13" rx="2" />
+    <path d="M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2M3 13h18" />
+  </Svg>
+);
+
+export const LockIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <rect x="4.5" y="11" width="15" height="10" rx="2" />
+    <path d="M8 11V7.5a4 4 0 0 1 8 0V11M12 15v2" />
+  </Svg>
+);
+
+export const HeartIcon = ({ size = 16 }: P) => (
+  <Svg size={size}>
+    <path d="M12 20s-7.4-4.5-9-9.1C2 7.6 4 4.5 7.2 4.5c2 0 3.4 1 4.8 3 1.4-2 2.8-3 4.8-3C20 4.5 22 7.6 21 10.9 19.4 15.5 12 20 12 20Z" />
+  </Svg>
+);

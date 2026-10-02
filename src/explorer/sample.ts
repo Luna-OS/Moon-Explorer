@@ -20,10 +20,27 @@ export interface Place {
   path: string[];
 }
 
+/** What kind of volume a drive is; picks its default icon. */
+export type DriveKind = "system" | "fixed" | "removable" | "network";
+
+export const DRIVE_KIND_LABELS: Record<DriveKind, string> = {
+  system: "System drive",
+  fixed: "Local disk",
+  removable: "Removable drive",
+  network: "Network drive",
+};
+
 export interface Drive {
   id: string;
   label: string;
   letter: string;
+  kind: DriveKind;
+  /**
+   * The volume serial / ID from the OS, when known. It stays the same when a
+   * USB stick comes back under another letter, so per-drive settings (like a
+   * custom icon) are keyed on it. See `driveKey` in drive-icons/store.ts.
+   */
+  volumeId?: string;
   used: number;
   total: number;
 }
@@ -38,11 +55,20 @@ export const PLACES: Place[] = [
 ];
 
 const GB = 1024 ** 3;
+const TB = 1024 ** 4;
 
 export const DRIVES: Drive[] = [
-  { id: "c", label: "System", letter: "C:", used: 688 * GB, total: 931 * GB },
-  { id: "d", label: "Moonlight", letter: "D:", used: 412 * GB, total: 1863 * GB },
-  { id: "e", label: "USB stick", letter: "E:", used: 27.4 * GB, total: 29.8 * GB },
+  { id: "c", label: "System", letter: "C:", kind: "system", used: 688 * GB, total: 931 * GB },
+  { id: "d", label: "Moonlight", letter: "D:", kind: "fixed", used: 412 * GB, total: 1863 * GB },
+  {
+    id: "e",
+    label: "USB stick",
+    letter: "E:",
+    kind: "removable",
+    used: 27.4 * GB,
+    total: 29.8 * GB,
+  },
+  { id: "z", label: "Starbase", letter: "Z:", kind: "network", used: 2.1 * TB, total: 3.6 * TB },
 ];
 
 export const ENTRIES: Entry[] = [

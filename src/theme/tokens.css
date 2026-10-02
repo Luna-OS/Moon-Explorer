@@ -71,6 +71,14 @@
   --me-kind-archive: var(--color-warning-400);
   --me-kind-file: color-mix(in srgb, var(--color-cream-100) 55%, transparent);
 
+  /* Tints a user can give a drive icon (drive-icons/builtins.ts). */
+  --me-tint-lavender: var(--color-lavender-400);
+  --me-tint-sky: var(--color-sky-300);
+  --me-tint-mint: var(--color-mint-400);
+  --me-tint-peach: var(--color-peach-300);
+  --me-tint-gold: var(--color-warning-400);
+  --me-tint-rose: #f28b92;
+
   --me-motion: 180ms;
 }
 
@@ -107,6 +115,13 @@
   --me-kind-code: #1d7d65;
   --me-kind-archive: #a86b00;
   --me-kind-file: color-mix(in srgb, #1c1733 50%, transparent);
+
+  --me-tint-lavender: #7d6de0;
+  --me-tint-sky: #2f86b5;
+  --me-tint-mint: #1d7d65;
+  --me-tint-peach: #c7663b;
+  --me-tint-gold: #a86b00;
+  --me-tint-rose: #c2323d;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -618,5 +633,81 @@ body {
     font-family: var(--font-mono);
     font-size: 0.65rem;
     color: var(--me-text-muted);
+  }
+
+  /* Items of a context menu (Moon Browser's menu rows). */
+  .me-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 2rem;
+    padding: 0 0.65rem;
+    border: 0;
+    border-radius: 0.55rem;
+    background: transparent;
+    color: var(--me-text);
+    font: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .me-menu-item:hover,
+  .me-menu-item:focus-visible {
+    background: var(--me-selected);
+    outline: none;
+  }
+
+  /* A tile in the drive icon gallery (a radio). */
+  .me-icon-choice {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    border-radius: 0.7rem;
+    border: 1px solid transparent;
+    background: var(--me-hover);
+    color: var(--me-text-muted);
+    cursor: pointer;
+    transition:
+      background-color var(--me-motion),
+      border-color var(--me-motion),
+      color var(--me-motion);
+  }
+  .me-icon-choice:hover {
+    background: color-mix(in srgb, var(--color-lavender-400) 12%, transparent);
+    color: var(--me-text);
+  }
+  .me-icon-choice[aria-checked="true"] {
+    background: var(--me-selected);
+    border-color: color-mix(in srgb, var(--color-lavender-400) 60%, transparent);
+    color: var(--me-accent);
+  }
+
+  /* A round color swatch (a radio); the color comes in as `color`. */
+  .me-swatch {
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border-radius: 999px;
+    border: 2px solid var(--me-solid);
+    background: currentColor;
+    box-shadow: 0 0 0 1px var(--me-border-strong);
+    cursor: pointer;
+    transition: box-shadow var(--me-motion);
+  }
+  .me-swatch[data-none] {
+    color: var(--me-text-faint);
+    background: linear-gradient(
+      135deg,
+      transparent calc(50% - 1px),
+      currentColor calc(50% - 1px) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    );
+  }
+  .me-swatch[aria-checked="true"] {
+    box-shadow: 0 0 0 2px var(--me-accent);
+  }
+  .me-swatch:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
   }
 }
