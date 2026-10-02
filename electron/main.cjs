@@ -12,13 +12,16 @@ const {
   Menu,
   protocol,
   net,
+  dialog,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const fsp = fs.promises;
 const { pathToFileURL } = require("url");
+const crypto = require("crypto");
 const { execFile, spawn } = require("child_process");
 const { startFromArgv } = require("./start.cjs");
+const defaultFileManager = require("./default-file-manager/index.cjs");
 
 const ROOT = path.join(__dirname, "..");
 const BUILD = path.join(ROOT, "build");
@@ -666,6 +669,10 @@ function registerIpc() {
     pendingStart = null;
     return s;
   });
+  handle("sys:defaultFileManager", () => defaultFileManager.status(app));
+  handle("sys:setDefaultFileManager", (enabled) =>
+    defaultFileManager.setEnabled(app, Boolean(enabled)),
+  );
 
   handle("fs:list", async (dir) => {
     const [dirents, hidden] = await Promise.all([
@@ -754,6 +761,12 @@ function registerIpc() {
     if (t) t.cancelled = true;
   });
 
+  handle("fs:checksums", async (p) => {
+    const algorithms = ["sha256", "sha1", "md5"];
+    const hashes = algorithms.map((a) => crypto.createHash(a));
+    for await (const chunk of fs.createReadStream(p)) for (const h of hashes) h.update(chunk);
+    return Object.fromEntries(algorithms.map((a, i) => [a, hashes[i].digest("hex")]));
+  });
   handle("fs:dirSize", async (p) => {
     let size = 0;
     let files = 0;
@@ -903,7 +916,16 @@ function createWindow() {
   });
   if (process.env.MOON_DEV_URL) win.loadURL(process.env.MOON_DEV_URL);
   else win.loadFile(path.join(ROOT, "dist", "index.html"));
-  win.once("ready-to-show", () => win.show());
+  win.once("ready-to-show", () => {
+    win.show();
+    // Only the installed app: a development run would offer to register electron.exe instead.
+    // A few seconds later, so it doesn't slow the start down or race the installer's --set-default.
+    if (app.isPackaged && !process.env.MOON_SHOT) {
+      setTimeout(() => {
+        if (win) void defaultFileManager.checkOnStartup(app, dialog, win);
+      }, 5000);
+    }
+  });
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   win.webContents.on("will-navigate", (e) => e.preventDefault());
   win.on("closed", () => {
@@ -944,10 +966,11 @@ function runScreenshotScript() {
 
 if (process.env.MOON_SHOT) app.setPath("userData", path.join(process.env.MOON_SHOT, "userdata"));
 
-// Integration point for the default-file-manager module (src/default-file-manager, see its docs):
-//   if (dfm.handleCliFlags(app)) return;   // before the single-instance lock
-//   and startPathFromArgv() replaces startFromArgv() below (same result shape).
-if (!app.requestSingleInstanceLock()) {
+// --set-default / --unset-default / --default-status (docs/default-file-manager.md) do their work and quit
+// without a window, so they come before the single-instance lock.
+if (defaultFileManager.handleCliFlags(app)) {
+  // Nothing else to start.
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   pendingStart = startFromArgv(app, process.argv);

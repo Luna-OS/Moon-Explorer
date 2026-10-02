@@ -24,7 +24,14 @@ This writes to `release/`:
 - `Moon-Explorer-Setup-<version>.exe`: the Windows installer (per user, no admin rights, Start menu and desktop shortcut)
 - `Moon-Explorer-<version>-win-x64.zip`: a portable build; unzip it and run `Moon Explorer.exe`
 
-`npm run icons` re-renders the app icons in `build/` from `public/moon-explorer-logo.svg`.
+The installer has the Moon look (a night-sky picture on the welcome and finish pages, the logo in the
+page header), and its last page offers **Use as default file manager**. Uninstalling gives folders back
+to Windows Explorer first. Its pages are in `build/installer.nsh`.
+
+![The installer's welcome page](docs/screenshots/installer/welcome.png)
+
+`npm run icons` re-renders the app icons in `build/` from `public/moon-explorer-logo.svg`, and the
+installer pictures (`build/*.bmp`) from `build/installer/*.svg`.
 
 ## Development
 
@@ -41,6 +48,12 @@ Tabs, two panes side by side, a command palette, Quick Look, live search through
 (also inside files), folder sizes, bulk rename, undo, ZIP and more. See
 [docs/desktop-app.md](docs/desktop-app.md) for the features, the keyboard shortcuts and how the
 pieces fit together.
+
+## Default file manager
+
+**Settings → Use as default file manager** lets folders, drives, This PC and Win+E open in Moon Explorer
+instead of Windows Explorer (per user, no admin rights, switch back any time). See
+[docs/default-file-manager.md](docs/default-file-manager.md).
 
 ## Theme
 

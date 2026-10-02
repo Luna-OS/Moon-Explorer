@@ -42,6 +42,8 @@ contextBridge.exposeInMainWorld("moon", {
   refreshDrives: () => call("sys:refreshDrives"),
   env: () => call("sys:env"),
   takeStart: () => call("sys:takeStart"),
+  defaultFileManager: () => call("sys:defaultFileManager"),
+  setDefaultFileManager: (enabled) => call("sys:setDefaultFileManager", enabled),
 
   list: (dir) => call("fs:list", dir),
   stat: (p) => call("fs:stat", p),
@@ -60,6 +62,7 @@ contextBridge.exposeInMainWorld("moon", {
   remove: (opts) => call("fs:delete", opts),
   cancelTask: (id) => call("task:cancel", id),
   dirSize: (p) => call("fs:dirSize", p),
+  checksums: (p) => call("fs:checksums", p),
   zip: (sources, dest) => call("fs:zip", sources, dest),
   unzip: (archive, dest) => call("fs:unzip", archive, dest),
   search: (opts) => call("search:start", opts),

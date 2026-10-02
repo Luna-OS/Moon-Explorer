@@ -8,6 +8,8 @@ import { DRIVES, ENTRIES } from "@/explorer/sample";
 import { basename, dirname, extname, isInside, join, normalize, samePath } from "./paths";
 import type {
   BridgeEvents,
+  Checksums,
+  DefaultFileManagerStatus,
   FsDrive,
   FsEntry,
   MoonBridge,
@@ -43,12 +45,40 @@ function file(name: string, size: number, mtime: number, text?: string): Node {
 
 type Listener = (data: unknown) => void;
 
+/** FNV-1a over the text, stretched to `length` hex digits. */
+function fakeDigest(text: string, length: number): string {
+  let out = "";
+  for (let round = 0; out.length < length; round++) {
+    let h = 0x811c9dc5 ^ round;
+    for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+    out += (h >>> 0).toString(16).padStart(8, "0");
+  }
+  return out.slice(0, length);
+}
+
+function demoDefaultFm(on: boolean): DefaultFileManagerStatus {
+  const state = on ? "on" : "off";
+  return {
+    state,
+    enabled: on,
+    needsAttention: false,
+    targets: [
+      { id: "folder", label: "Folders", state },
+      { id: "drive", label: "Drives", state },
+      { id: "this-pc", label: "This PC", state },
+      { id: "win-e", label: "Win+E / new Explorer windows", state },
+    ],
+  };
+}
+
 export class DemoBridge implements MoonBridge {
   readonly kind = "demo" as const;
   private roots = new Map<string, Node>();
   private listeners = new Map<string, Set<Listener>>();
   private taskSeq = 0;
   private start: StartTarget | null;
+  /** Pretends to register with Windows; the tests may set it to another state. */
+  defaultFm: DefaultFileManagerStatus = demoDefaultFm(false);
   /** Shell actions the UI asked for (open, terminal, …); the tests read them. */
   readonly shellCalls: { action: string; target: string }[] = [];
 
@@ -171,6 +201,15 @@ export class DemoBridge implements MoonBridge {
     const s = this.start;
     this.start = null;
     return Promise.resolve(s);
+  }
+
+  defaultFileManager(): Promise<DefaultFileManagerStatus> {
+    return Promise.resolve(this.defaultFm);
+  }
+
+  setDefaultFileManager(enabled: boolean): Promise<DefaultFileManagerStatus> {
+    this.defaultFm = demoDefaultFm(enabled);
+    return Promise.resolve(this.defaultFm);
   }
 
   async list(p: string): Promise<FsEntry[]> {
@@ -337,6 +376,14 @@ export class DemoBridge implements MoonBridge {
       }
     }
     return { size, files, dirs };
+  }
+
+  /** Stand-in digests (the demo has no real file content): stable per path, right length. */
+  async checksums(p: string): Promise<Checksums> {
+    const n = this.require(p);
+    if (n.isDir) throw Object.assign(new Error("Not a file."), { code: "EISDIR" });
+    const seed = `${normalize(p)}|${n.size}|${n.text ?? ""}`;
+    return { sha256: fakeDigest(seed, 64), sha1: fakeDigest(seed, 40), md5: fakeDigest(seed, 32) };
   }
 
   async zip(sources: string[], dest: string): Promise<string> {

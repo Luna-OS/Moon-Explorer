@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -b --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && npm run test:main",
+    "test:main": "node --test \"electron/**/*.test.cjs\"",
     "test:watch": "vitest",
     "app": "npm run build && electron .",
     "app:dev": "node scripts/dev.cjs",
@@ -64,6 +65,7 @@
     },
     "files": [
       "electron/**/*",
+      "!electron/**/test/**",
       "dist/**/*",
       "build/icon.png",
       "build/drag.png",
@@ -83,6 +85,13 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "Moon Explorer",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "uninstallDisplayName": "Moon Explorer",
+      "menuCategory": false,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
       "artifactName": "Moon-Explorer-Setup-${version}.${ext}"
     }
   }

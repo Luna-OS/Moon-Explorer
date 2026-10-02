@@ -1,9 +1,7 @@
 "use strict";
 // What to open when Moon Explorer is started with an argument (a folder, a file, a drive or --this-pc).
-//
-// The result has the same shape as startPathFromArgv() from src/default-file-manager/electron.js
-// (the default-file-manager module). Once that module is merged, main.cjs calls it instead of
-// startFromArgv() below and nothing else changes.
+// As the default file manager (electron/default-file-manager), this is how Windows hands over the
+// folder, drive or This PC that was double-clicked.
 
 const fs = require("fs");
 const path = require("path");
@@ -32,7 +30,7 @@ function normalizeArg(raw) {
  *   | {kind: 'file', path: string, folder: string} | {kind: 'shell', target: string} | {kind: 'missing', path: string}}
  */
 function resolveStart(args, { stat = statKind, cwd = process.cwd() } = {}) {
-  for (const raw of args) {
+  for (const raw of args || []) {
     if (raw === THIS_PC_ARG) return { kind: "this-pc" };
     const arg = normalizeArg(raw);
     // Electron and Chromium switches; a real path is never a flag.
@@ -47,7 +45,7 @@ function resolveStart(args, { stat = statKind, cwd = process.cwd() } = {}) {
   return { kind: "home" };
 }
 
-/** Same signature as the default-file-manager module's startPathFromArgv(app, argv). */
+/** The start target from a command line (the first launch, or the argv of 'second-instance'). */
 function startFromArgv(app, argv) {
   return resolveStart(argv.slice(app.isPackaged ? 1 : 2));
 }
