@@ -33,6 +33,13 @@ to Windows Explorer first. Its pages are in `build/installer.nsh`.
 `npm run icons` re-renders the app icons in `build/` from `public/moon-explorer-logo.svg`, and the
 installer pictures (`build/*.bmp`) from `build/installer/*.svg`.
 
+### Release
+
+Set the version in `package.json` (`npm version <x.y.z> --no-git-tag-version`), write the notes in
+`docs/releases/v<x.y.z>.md`, merge, then push the tag `v<x.y.z>`. The Release workflow
+(`.github/workflows/release.yml`) checks and tests the code on Windows, builds the installer and
+the ZIP, and publishes them as a GitHub release with those notes.
+
 ## Development
 
 ```sh

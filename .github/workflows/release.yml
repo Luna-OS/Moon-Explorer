@@ -1,0 +1,57 @@
+# Builds the Windows installer and the portable ZIP on a Windows runner and publishes them as a
+# GitHub release when a version tag (v1.2.3) is pushed. The release notes come from
+# docs/releases/<tag>.md, and the tag must match the version in package.json.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      # Keep LF line endings (Prettier checks for them); Windows runners convert to CRLF by default.
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check the tag against package.json
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match package.json version $version"
+            exit 1
+          fi
+          test -f "docs/releases/$GITHUB_REF_NAME.md" || {
+            echo "::error::docs/releases/$GITHUB_REF_NAME.md is missing"
+            exit 1
+          }
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npx prettier --check .
+      - run: npm test
+      - run: npm run build
+      # Only build here; the release is published below with gh.
+      - run: npx electron-builder --win --publish never
+
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            "release/Moon-Explorer-Setup-$version.exe" \
+            "release/Moon-Explorer-$version-win-x64.zip" \
+            --title "Moon Explorer $version" \
+            --notes-file "docs/releases/$GITHUB_REF_NAME.md"
