@@ -1,11 +1,14 @@
 # Builds the Windows installer and the portable ZIP on a Windows runner and publishes them as a
-# GitHub release when a version tag (v1.2.3) is pushed. The release notes come from
-# docs/releases/<tag>.md, and the tag must match the version in package.json.
+# GitHub release. It starts either when a version tag (v1.2.3) is pushed, or by hand with
+# "Run workflow" (workflow_dispatch) on a branch: then it releases that commit and creates the tag
+# v<package.json version> itself. The release notes come from docs/releases/<tag>.md, and the tag
+# must match the version in package.json.
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,18 +26,29 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Check the tag against package.json
+      - name: Work out the tag and check it against package.json
         shell: bash
         run: |
           version="$(node -p "require('./package.json').version")"
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME doesn't match package.json version $version"
-            exit 1
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag="$GITHUB_REF_NAME"
+            if [ "v$version" != "$tag" ]; then
+              echo "::error::Tag $tag doesn't match package.json version $version"
+              exit 1
+            fi
+          else
+            tag="v$version"
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+              echo "::error::$tag already exists; raise the version in package.json first"
+              exit 1
+            fi
           fi
-          test -f "docs/releases/$GITHUB_REF_NAME.md" || {
-            echo "::error::docs/releases/$GITHUB_REF_NAME.md is missing"
+          test -f "docs/releases/$tag.md" || {
+            echo "::error::docs/releases/$tag.md is missing"
             exit 1
           }
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
 
       - run: npm ci
       - run: npm run lint
@@ -48,10 +62,11 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+        # --target creates the tag on this commit when it doesn't exist yet (a manual run).
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" \
-            "release/Moon-Explorer-Setup-$version.exe" \
-            "release/Moon-Explorer-$version-win-x64.zip" \
-            --title "Moon Explorer $version" \
-            --notes-file "docs/releases/$GITHUB_REF_NAME.md"
+          gh release create "$TAG" \
+            "release/Moon-Explorer-Setup-$VERSION.exe" \
+            "release/Moon-Explorer-$VERSION-win-x64.zip" \
+            --target "$GITHUB_SHA" \
+            --title "Moon Explorer $VERSION" \
+            --notes-file "docs/releases/$TAG.md"

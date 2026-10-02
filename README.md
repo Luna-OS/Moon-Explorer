@@ -36,7 +36,8 @@ installer pictures (`build/*.bmp`) from `build/installer/*.svg`.
 ### Release
 
 Set the version in `package.json` (`npm version <x.y.z> --no-git-tag-version`), write the notes in
-`docs/releases/v<x.y.z>.md`, merge, then push the tag `v<x.y.z>`. The Release workflow
+`docs/releases/v<x.y.z>.md`, merge, then push the tag `v<x.y.z>`, or start the Release workflow
+by hand (Actions → Release → Run workflow on `main`), which creates the tag itself. The workflow
 (`.github/workflows/release.yml`) checks and tests the code on Windows, builds the installer and
 the ZIP, and publishes them as a GitHub release with those notes.
 
