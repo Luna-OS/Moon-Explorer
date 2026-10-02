@@ -25,3 +25,9 @@ palette, typography and components, and which sibling app each value comes from.
 
 Right-click a drive and choose **Change icon…** to give it a built-in icon,
 a tint or your own image. See [docs/drive-icons.md](docs/drive-icons.md).
+
+## Language
+
+The app UI and everything in this repository (code, identifiers, comments,
+tests, docs, commit messages, pull requests) are in English, even when a
+request is written in another language. See [CLAUDE.md](CLAUDE.md).
