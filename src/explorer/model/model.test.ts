@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
 import { DemoBridge } from "@/fs/demo";
 import { formatCapacity } from "@/fs/format";
-import type { FsEntry } from "@/fs/types";
+import type { FsEntry, PickerRequest } from "@/fs/types";
 import { planRenames } from "../rename";
 import { filterEntries, sortEntries } from "./pane";
 import { Workspace } from "./workspace";
+import { entryMenu } from "../commands";
 
 const DOCS = "C:\\Users\\Luna\\Documents";
 
@@ -296,5 +297,118 @@ describe("drive sizes", () => {
     const c = ws.drives.find((d) => d.id === "c")!;
     expect(c.total - c.used).toBe(145 * GB);
     expect(ws.drivesRefreshing).toBe(false);
+  });
+});
+
+describe("Open/Save dialog (picker mode)", () => {
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  async function picker(req: Partial<PickerRequest>) {
+    localStorage.clear();
+    const bridge = new DemoBridge();
+    bridge.pickerRequest = {
+      mode: "save",
+      title: "Save As",
+      suggestedName: "",
+      startDir: DOCS,
+      filters: [],
+      ...req,
+    };
+    const ws = new Workspace(bridge, localStorage);
+    await ws.init();
+    return { ws, bridge };
+  }
+
+  it("saves to the current folder, adding the filter's extension", async () => {
+    const { ws, bridge } = await picker({
+      suggestedName: "notes",
+      filters: [{ label: "Text", extensions: ["txt", "md"] }],
+    });
+    expect(ws.pane!.path).toBe(DOCS);
+    expect(ws.pickerCanConfirm()).toBe(true);
+    await ws.confirmPicker();
+    expect(bridge.pickerResult).toBe(`${DOCS}\\notes.txt`);
+  });
+
+  it("keeps an extension the name already has", async () => {
+    const { ws, bridge } = await picker({
+      suggestedName: "cover.png",
+      filters: [{ label: "Text", extensions: ["txt"] }],
+    });
+    await ws.confirmPicker();
+    expect(bridge.pickerResult).toBe(`${DOCS}\\cover.png`);
+  });
+
+  it("asks before replacing an existing file", async () => {
+    const { ws, bridge } = await picker({ suggestedName: "tokens.css" });
+    const done = ws.confirmPicker();
+    await tick();
+    expect(ws.dialog?.type).toBe("confirm");
+    if (ws.dialog?.type === "confirm") ws.dialog.resolve(false);
+    await done;
+    expect(bridge.pickerResult).toBeUndefined();
+
+    const again = ws.confirmPicker();
+    await tick();
+    if (ws.dialog?.type === "confirm") ws.dialog.resolve(true);
+    await again;
+    expect(bridge.pickerResult).toBe(`${DOCS}\\tokens.css`);
+  });
+
+  it("returns the selected file in open mode, and on activating it", async () => {
+    const { ws, bridge } = await picker({ mode: "open", title: "Open" });
+    const pane = ws.pane!;
+    expect(ws.pickerCanConfirm()).toBe(false);
+    pane.selectPaths([`${DOCS}\\tokens.css`]);
+    expect(ws.pickerCanConfirm()).toBe(true);
+    await ws.confirmPicker();
+    expect(bridge.pickerResult).toBe(`${DOCS}\\tokens.css`);
+
+    bridge.pickerResult = undefined;
+    await ws.openEntries(pane, [await bridge.stat(`${DOCS}\\explorer.ts`)]);
+    expect(bridge.pickerResult).toBe(`${DOCS}\\explorer.ts`);
+  });
+
+  it("returns the current folder in folder mode, and cancels with null", async () => {
+    const { ws, bridge } = await picker({ mode: "folder", title: "Select Folder" });
+    await ws.confirmPicker();
+    expect(bridge.pickerResult).toBe(DOCS);
+    ws.cancelPicker();
+    await tick();
+    expect(bridge.pickerResult).toBeNull();
+  });
+
+  it("does not save the session while it is a dialog", async () => {
+    const { ws } = await picker({ suggestedName: "x" });
+    ws.saveNow();
+    expect(localStorage.getItem("moonexplorer.settings")).toBeNull();
+  });
+});
+
+describe("Run as administrator", () => {
+  it("offers it for runnable files only, and runs them elevated", async () => {
+    localStorage.clear();
+    const bridge = new DemoBridge();
+    const ws = new Workspace(bridge, localStorage);
+    await ws.init();
+    const pane = ws.pane!;
+
+    const exePath = await bridge.createFile(DOCS, "setup.exe");
+    const exe = await bridge.stat(exePath);
+    const labels = (es: FsEntry[]) =>
+      entryMenu(ws, pane, es)
+        .filter((m): m is Exclude<typeof m, string> => typeof m !== "string")
+        .map((m) => m.label);
+
+    expect(labels([exe])).toContain("Run as administrator");
+    // A plain document does not get the entry.
+    expect(labels([await bridge.stat(`${DOCS}\\tokens.css`)])).not.toContain(
+      "Run as administrator",
+    );
+
+    const item = entryMenu(ws, pane, [exe])
+      .filter((m): m is Exclude<typeof m, string> => typeof m !== "string")
+      .find((m) => m.label === "Run as administrator");
+    item?.onSelect?.();
+    expect(bridge.shellCalls.at(-1)).toEqual({ action: "runAsAdmin", target: exePath });
   });
 });

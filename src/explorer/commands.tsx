@@ -334,6 +334,31 @@ export function commands(ws: Workspace, onQuickLook: () => void): Command[] {
 
 const ARCHIVES = new Set(["zip", "tar", "gz", "tgz", "7z", "rar", "xz", "bz2"]);
 
+/** Files that Windows can start elevated ("Run as administrator"). */
+const RUNNABLE = new Set([
+  "exe",
+  "msi",
+  "bat",
+  "cmd",
+  "com",
+  "scr",
+  "ps1",
+  "vbs",
+  "msc",
+  "cpl",
+  "lnk",
+]);
+
+/** Runs a program elevated, ignoring the user simply declining the UAC prompt. */
+function runAsAdmin(ws: Workspace, path: string) {
+  void ws.bridge.runAsAdmin(path).catch((e: unknown) => {
+    const err = e as { code?: string; message?: string };
+    if (err?.code !== "ERR_CANCELLED") {
+      ws.toast(`Couldn't run as administrator: ${err?.message ?? String(e)}`, { error: true });
+    }
+  });
+}
+
 /** The right-click menu of one or more entries. */
 export function entryMenu(ws: Workspace, pane: PaneModel, entries: FsEntry[]): MenuEntry[] {
   const one = entries.length === 1 ? entries[0] : null;
@@ -355,6 +380,12 @@ export function entryMenu(ws: Workspace, pane: PaneModel, entries: FsEntry[]): M
     one?.isDir &&
       !!other && { label: "Open in the other pane", onSelect: () => void other.go(one.path) },
     one && !one.isDir && { label: "Open with…", onSelect: () => void ws.bridge.openWith(one.path) },
+    one &&
+      !one.isDir &&
+      RUNNABLE.has(one.ext) && {
+        label: "Run as administrator",
+        onSelect: () => runAsAdmin(ws, one.path),
+      },
     pane.loc?.kind === "search" &&
       one && {
         label: "Open file location",

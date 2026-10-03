@@ -25,7 +25,7 @@ it uses an in-memory demo file system with the sample content.
 | **ZIP** | *Compress to ZIP*, *Extract here* and *Extract to “name”* (ZIP, TAR, GZ and more through Windows' own `tar`). |
 | **Folder sizes** | *Show folder sizes* adds them to the size column, calculated in the background. |
 | **Places and drives** | The sidebar shows your folders, pinned folders and every drive with its fill level and custom icon (see [drive-icons.md](drive-icons.md)). Free space is shown the way Windows shows it ("145 GB free of 1.81 TB") and is checked again when the window comes back to the front, after copying, moving or deleting, once a minute, and with the refresh button next to the drives (or F5 in This PC). |
-| **Windows integration** | *Open in Terminal*, *Open with…*, *Show in Windows Explorer* and Windows' own *Properties* dialog. Hidden files follow Windows' hidden attribute (Ctrl+H shows them). Moon Explorer can also be the [default file manager](default-file-manager.md). |
+| **Windows integration** | *Open in Terminal*, *Open with…*, *Show in Windows Explorer* and Windows' own *Properties* dialog. Hidden files follow Windows' hidden attribute (Ctrl+H shows them). *Run as administrator* for programs (through the Windows UAC prompt). Moon Explorer can also be the [default file manager](default-file-manager.md), and act as an [Open/Save dialog](picker.md). |
 
 ![Two panes](screenshots/desktop/two-panes.png)
 
@@ -63,6 +63,7 @@ it uses an in-memory demo file system with the sample content.
 | `electron/preload.cjs` | The bridge (`window.moon`). Its shape is `MoonBridge` in `src/fs/types.ts`. |
 | `electron/start.cjs` | Turns the command line (a folder, a file, a drive root, `--this-pc`) into what to open. |
 | `electron/default-file-manager/` | Registers Moon Explorer as the default file manager and back (see [default-file-manager.md](default-file-manager.md)). |
+| `electron/picker.cjs` | Runs Moon Explorer as an Open/Save file dialog (see [picker.md](picker.md)). |
 | `src/fs/` | The bridge types, Windows path helpers, formatting, and `DemoBridge`, the in-memory file system for the browser and the tests. |
 | `src/explorer/model/` | Plain TypeScript models: `PaneModel` (location, history, listing, filter, sort, selection, search) and `Workspace` (tabs, clipboard, undo, tasks, dialogs, settings). Components subscribe with `useStore`. |
 | `src/explorer/` | The views: `FileView` (virtualized list and icon grid), `PathBar`, `PaneView`, `Preview`, `Dialogs`, `Overlays` (palette, Quick Look, toasts) and `commands.tsx` (menus and shortcuts). |

@@ -42,6 +42,8 @@ contextBridge.exposeInMainWorld("moon", {
   refreshDrives: () => call("sys:refreshDrives"),
   env: () => call("sys:env"),
   takeStart: () => call("sys:takeStart"),
+  picker: () => call("sys:picker"),
+  resolvePicker: (chosen) => call("picker:resolve", chosen),
   defaultFileManager: () => call("sys:defaultFileManager"),
   setDefaultFileManager: (enabled) => call("sys:setDefaultFileManager", enabled),
 
@@ -71,6 +73,7 @@ contextBridge.exposeInMainWorld("moon", {
 
   open: (p) => call("shell:open", p),
   openWith: (p) => call("shell:openWith", p),
+  runAsAdmin: (p) => call("shell:runAsAdmin", p),
   reveal: (p) => call("shell:reveal", p),
   openInWindowsExplorer: (target) => call("shell:openInWindowsExplorer", target),
   resolveLink: (p) => call("shell:resolveLink", p),

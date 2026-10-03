@@ -22,6 +22,7 @@ const crypto = require("crypto");
 const { execFile, spawn } = require("child_process");
 const { startFromArgv } = require("./start.cjs");
 const defaultFileManager = require("./default-file-manager/index.cjs");
+const picker = require("./picker.cjs");
 
 const ROOT = path.join(__dirname, "..");
 const BUILD = path.join(ROOT, "build");
@@ -50,6 +51,8 @@ const TITLE_BAR_HEIGHT = 40;
 
 let win = null;
 let pendingStart = null;
+// Set when the app runs as an Open/Save dialog (electron/picker.cjs); null for a normal launch.
+let pickerRequest = null;
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -103,6 +106,40 @@ function powershell(script) {
 }
 
 const psQuote = (s) => `'${String(s).replace(/'/g, "''")}'`;
+
+/**
+ * Runs a program elevated through the Windows UAC prompt (ShellExecute "runas", the same as Windows
+ * Explorer's "Run as administrator"). The path goes through an environment variable, so it never needs
+ * shell quoting. Rejects with code ERR_CANCELLED when the user declines the prompt.
+ */
+function runAsAdmin(p) {
+  return new Promise((resolve, reject) => {
+    execFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "try { Start-Process -FilePath $env:MOON_RUNAS -WorkingDirectory $env:MOON_RUNAS_DIR -Verb RunAs } " +
+          "catch { [Console]::Error.Write($_.Exception.Message); exit 1 }",
+      ],
+      {
+        windowsHide: true,
+        env: { ...process.env, MOON_RUNAS: p, MOON_RUNAS_DIR: path.dirname(p) },
+      },
+      (err, _stdout, stderr) => {
+        if (!err) return resolve();
+        const message = (stderr || err.message || "").trim();
+        const e = new Error(message || "Could not run as administrator.");
+        // The UAC prompt being declined is normal, not a failure to report.
+        if (/cancel/i.test(message)) e.code = "ERR_CANCELLED";
+        reject(e);
+      },
+    );
+  });
+}
 
 /** Names carrying the Windows "hidden" attribute (lower-cased). cmd /u writes UTF-16, so every file name survives. */
 async function hiddenNames(dir) {
@@ -696,6 +733,8 @@ function registerIpc() {
     pendingStart = null;
     return s;
   });
+  handle("sys:picker", () => pickerRequest);
+  handle("picker:resolve", (chosen) => picker.deliver(app, pickerRequest, chosen));
   handle("sys:defaultFileManager", () => defaultFileManager.status(app));
   handle("sys:setDefaultFileManager", (enabled) =>
     defaultFileManager.setEnabled(app, Boolean(enabled)),
@@ -855,6 +894,7 @@ function registerIpc() {
       stdio: "ignore",
     }).unref();
   });
+  handle("shell:runAsAdmin", runAsAdmin);
   handle("shell:reveal", (p) => shell.showItemInFolder(p));
   // Always explorer.exe itself, so this keeps working when Moon Explorer is the default file manager.
   handle("shell:openInWindowsExplorer", (target) => {
@@ -931,7 +971,7 @@ function createWindow() {
     titleBarStyle: "hidden",
     titleBarOverlay: { ...FRAME.dark, height: TITLE_BAR_HEIGHT },
     icon: path.join(BUILD, "icon.png"),
-    title: "Moon Explorer",
+    title: pickerRequest ? pickerRequest.title : "Moon Explorer",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -945,9 +985,10 @@ function createWindow() {
   else win.loadFile(path.join(ROOT, "dist", "index.html"));
   win.once("ready-to-show", () => {
     win.show();
-    // Only the installed app: a development run would offer to register electron.exe instead.
+    // Only the installed app, and not while it is a transient Open/Save dialog: a development run
+    // would offer to register electron.exe instead.
     // A few seconds later, so it doesn't slow the start down or race the installer's --set-default.
-    if (app.isPackaged && !process.env.MOON_SHOT) {
+    if (app.isPackaged && !process.env.MOON_SHOT && !pickerRequest) {
       setTimeout(() => {
         if (win) void defaultFileManager.checkOnStartup(app, dialog, win);
       }, 5000);
@@ -997,6 +1038,17 @@ if (process.env.MOON_SHOT) app.setPath("userData", path.join(process.env.MOON_SH
 // without a window, so they come before the single-instance lock.
 if (defaultFileManager.handleCliFlags(app)) {
   // Nothing else to start.
+} else if ((pickerRequest = picker.fromArgv(app, process.argv))) {
+  // An Open/Save dialog: its own window, no single-instance lock (every caller needs its own), and
+  // it never persists the session. It returns a path through electron/picker.cjs and then quits.
+  app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
+    loadDriveInfo();
+    registerFileProtocol();
+    registerIpc();
+    createWindow();
+  });
+  app.on("window-all-closed", () => picker.deliver(app, pickerRequest, null));
 } else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
