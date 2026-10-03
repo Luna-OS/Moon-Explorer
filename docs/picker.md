@@ -29,7 +29,8 @@ the result file stays empty and the exit code is `1`; on a choice the exit code 
 
 - **Save:** type a name (or click a file to reuse its name) and choose a folder. If the name has no
   extension, the file type's first extension is added. Replacing an existing file asks first.
-- **Open:** pick one file (double-click confirms).
+- The list shows only files of the chosen **file type** (and folders); choose *All files* to see everything.
+- **Open:** pick one file (double-click or Enter confirms).
 - **Select folder:** returns the folder you are in.
 
 A dialog never changes your saved tabs or settings.

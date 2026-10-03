@@ -360,7 +360,16 @@ export class Workspace extends Store implements PaneHost {
 
   setPickerFilterIndex(index: number) {
     this.pickerFilterIndex = index;
+    // The list only shows files of the chosen type.
+    this.pane?.refreshView(this.pane.selected()[0]?.path);
     this.changed();
+  }
+
+  /** The chosen file type's extensions, or null for "all files" / not a dialog. Used by the list. */
+  pickerExtensions(): string[] | null {
+    const f = this.pickerFilter();
+    if (!f || f.extensions.includes("*")) return null;
+    return f.extensions;
   }
 
   pickerFilter(): { label: string; extensions: string[] } | null {

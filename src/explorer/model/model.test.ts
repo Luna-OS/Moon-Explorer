@@ -368,6 +368,31 @@ describe("Open/Save dialog (picker mode)", () => {
     expect(bridge.pickerResult).toBe(`${DOCS}\\explorer.ts`);
   });
 
+  it("shows only files of the chosen type, and all with *", async () => {
+    const { ws } = await picker({
+      mode: "open",
+      title: "Open",
+      filters: [
+        { label: "Images", extensions: ["png", "jpg"] },
+        { label: "PNG only", extensions: ["png"] },
+        { label: "All files", extensions: ["*"] },
+      ],
+    });
+    const names = () => ws.pane!.view.map((e) => e.name);
+    // Index 0 (Images) is applied from the first listing: folders plus png/jpg, no tokens.css.
+    expect(names()).toContain("crescent.png");
+    expect(names()).toContain("lunar-eclipse.jpg");
+    expect(names()).toContain("MoonDisk"); // a folder stays
+    expect(names()).not.toContain("tokens.css");
+
+    ws.setPickerFilterIndex(1); // PNG only
+    expect(names()).toContain("crescent.png");
+    expect(names()).not.toContain("lunar-eclipse.jpg");
+
+    ws.setPickerFilterIndex(2); // All files
+    expect(names()).toContain("tokens.css");
+  });
+
   it("returns the current folder in folder mode, and cancels with null", async () => {
     const { ws, bridge } = await picker({ mode: "folder", title: "Select Folder" });
     await ws.confirmPicker();
