@@ -41,6 +41,8 @@ export interface PaneHost {
   onSelection(pane: PaneModel): void;
   registerSearch(id: string, pane: PaneModel | null): void;
   reportError(message: string): void;
+  /** In Open/Save dialog mode, the extensions the chosen file type allows (lower-case, no dot), or null for all. */
+  pickerExtensions(): string[] | null;
   /** Asks Windows again for the drives' size and free space (This PC shows them). */
   refreshDrives(): Promise<void>;
 }
@@ -302,6 +304,8 @@ export class PaneModel extends Store {
     let items = this.items;
     if (!this.host.showHidden) items = items.filter((e) => !e.hidden);
     if (this.loc?.kind !== "search") items = filterEntries(items, this.filter);
+    const types = this.host.pickerExtensions();
+    if (types) items = items.filter((e) => e.isDir || types.includes(e.ext));
     this.view = sortEntries(items, this.sort, this.host.folderSizes);
     this.index = new Map(this.view.map((e, i) => [e.path, i]));
     for (const p of [...this.sel]) if (!this.index.has(p)) this.sel.delete(p);
