@@ -507,29 +507,32 @@ export default function App({ bridge }: { bridge?: MoonBridge }) {
                 </PaneSlot>
               ))}
             </div>
-            {pane && ws.settings.preview && <PreviewPanel ws={ws} pane={pane} />}
+            {pane && ws.settings.preview && !ws.picker && <PreviewPanel ws={ws} pane={pane} />}
           </main>
 
-          <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-(--me-border) bg-(--me-glass-bottom) px-6 py-2 text-xs text-(--me-text-muted) tabular-nums backdrop-blur-md">
-            <span>
-              {loc?.kind === "this-pc"
-                ? plural(ws.drives.length, "drive")
-                : plural(pane?.view.length ?? 0, "item")}
-            </span>
-            {selected.length > 0 && (
-              <span className="text-(--me-text)">
-                {plural(selected.length, "item")} selected
-                {selectedBytes ? ` · ${formatBytes(selectedBytes)}` : ""}
+          {ws.picker && <PickerBar ws={ws} />}
+          {!ws.picker && (
+            <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-(--me-border) bg-(--me-glass-bottom) px-6 py-2 text-xs text-(--me-text-muted) tabular-nums backdrop-blur-md">
+              <span>
+                {loc?.kind === "this-pc"
+                  ? plural(ws.drives.length, "drive")
+                  : plural(pane?.view.length ?? 0, "item")}
               </span>
-            )}
-            {hiddenCount > 0 && <span>{hiddenCount} hidden</span>}
-            <TaskStatus ws={ws} />
-            {drive && (
-              <span className="ml-auto">
-                {formatCapacity(drive.total - drive.used)} free on {ws.driveLabel(drive)}
-              </span>
-            )}
-          </footer>
+              {selected.length > 0 && (
+                <span className="text-(--me-text)">
+                  {plural(selected.length, "item")} selected
+                  {selectedBytes ? ` · ${formatBytes(selectedBytes)}` : ""}
+                </span>
+              )}
+              {hiddenCount > 0 && <span>{hiddenCount} hidden</span>}
+              <TaskStatus ws={ws} />
+              {drive && (
+                <span className="ml-auto">
+                  {formatCapacity(drive.total - drive.used)} free on {ws.driveLabel(drive)}
+                </span>
+              )}
+            </footer>
+          )}
         </div>
       </div>
 
@@ -763,5 +766,77 @@ function DriveGauge({
         </div>
       </div>
     </button>
+  );
+}
+
+/** The Save/Open/Select-Folder bar shown when Moon Explorer runs as a file dialog. */
+function PickerBar({ ws }: { ws: Workspace }) {
+  const picker = ws.picker;
+  if (!picker) return null;
+  const confirmLabel =
+    picker.mode === "save" ? "Save" : picker.mode === "folder" ? "Select folder" : "Open";
+  const selected = ws.pane?.selected() ?? [];
+  const canConfirm = ws.pickerCanConfirm();
+  return (
+    <section
+      aria-label={picker.title}
+      className="flex flex-wrap items-center gap-3 border-t border-(--me-border) bg-(--me-glass-bottom) px-6 py-3 backdrop-blur-md"
+    >
+      <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+        <span className="shrink-0 text-(--me-text-muted)">File name</span>
+        {picker.mode === "save" ? (
+          <input
+            className="me-input min-w-0 flex-1"
+            spellCheck={false}
+            aria-label="File name"
+            value={ws.pickerName}
+            onChange={(e) => ws.setPickerName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canConfirm) void ws.confirmPicker();
+            }}
+          />
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-(--me-text)">
+            {picker.mode === "folder"
+              ? (ws.pane?.workDir ?? "This PC")
+              : (selected.find((x) => !x.isDir)?.name ?? "")}
+          </span>
+        )}
+      </label>
+
+      {picker.filters.length > 0 && (
+        <label className="flex items-center gap-2 text-sm">
+          <span className="shrink-0 text-(--me-text-muted)">
+            {picker.mode === "save" ? "Save as type" : "Files of type"}
+          </span>
+          <select
+            className="me-input"
+            aria-label={picker.mode === "save" ? "Save as type" : "Files of type"}
+            value={ws.pickerFilterIndex}
+            onChange={(e) => ws.setPickerFilterIndex(Number(e.target.value))}
+          >
+            {picker.filters.map((f, i) => (
+              <option key={f.label} value={i}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      <div className="ml-auto flex items-center gap-2">
+        <button type="button" className="me-btn me-btn-ghost" onClick={() => ws.cancelPicker()}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="me-btn me-btn-primary"
+          disabled={!canConfirm}
+          onClick={() => void ws.confirmPicker()}
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </section>
   );
 }

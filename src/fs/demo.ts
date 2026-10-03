@@ -9,6 +9,7 @@ import { basename, dirname, extname, isInside, join, normalize, samePath } from 
 import type {
   BridgeEvents,
   Checksums,
+  PickerRequest,
   DefaultFileManagerStatus,
   FsDrive,
   FsEntry,
@@ -201,6 +202,20 @@ export class DemoBridge implements MoonBridge {
     const s = this.start;
     this.start = null;
     return Promise.resolve(s);
+  }
+
+  /** Set by a test to run the UI as an Open/Save dialog. */
+  pickerRequest: PickerRequest | null = null;
+  /** The path the picker returned (or null for cancel); the tests read it. */
+  pickerResult: string | null | undefined = undefined;
+
+  picker(): Promise<PickerRequest | null> {
+    return Promise.resolve(this.pickerRequest);
+  }
+
+  resolvePicker(path: string | null): Promise<void> {
+    this.pickerResult = path;
+    return Promise.resolve();
   }
 
   defaultFileManager(): Promise<DefaultFileManagerStatus> {
@@ -427,6 +442,9 @@ export class DemoBridge implements MoonBridge {
   }
   openWith(p: string) {
     return this.record("openWith", p);
+  }
+  runAsAdmin(p: string) {
+    return this.record("runAsAdmin", p);
   }
   reveal(p: string) {
     return this.record("reveal", p);

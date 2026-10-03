@@ -15,6 +15,7 @@ import type {
   FsDrive,
   FsEntry,
   MoonBridge,
+  PickerRequest,
   Places,
   StartTarget,
   TaskUpdate,
@@ -158,6 +159,10 @@ export class Workspace extends Store implements PaneHost {
   toasts: Toast[] = [];
   dialog: DialogRequest | null = null;
   ready = false;
+  /** Set when Moon Explorer runs as an Open/Save dialog (electron/picker.cjs); null otherwise. */
+  picker: PickerRequest | null = null;
+  pickerName = "";
+  pickerFilterIndex = 0;
   /** True while the drives' size and free space are being asked for again. */
   drivesRefreshing = false;
 
@@ -196,11 +201,12 @@ export class Workspace extends Store implements PaneHost {
 
   async init(): Promise<void> {
     const b = this.bridge;
-    const [places, drives, env, start] = await Promise.all([
+    const [places, drives, env, start, pick] = await Promise.all([
       b.places(),
       b.drives().catch(() => []),
       b.env().catch(() => ({})),
       b.takeStart().catch(() => null),
+      b.picker().catch(() => null),
     ]);
     this.places = places;
     this.drives = drives;
@@ -219,6 +225,16 @@ export class Workspace extends Store implements PaneHost {
       ),
       b.on("open-request", (s) => void this.openStart(s)),
     );
+    if (pick) {
+      // Open/Save dialog: one tab, no saved session, no restored tabs.
+      this.picker = pick;
+      this.pickerName = pick.suggestedName;
+      const startDir = pick.startDir ?? this.places.downloads ?? this.places.home ?? null;
+      await this.newTab(startDir ?? { kind: "this-pc" });
+      this.ready = true;
+      this.changed();
+      return;
+    }
     const session = this.settings.restoreSession ? this.settings.session : null;
     const explicit = start && start.kind !== "home";
     if (session?.tabs.length) {
@@ -282,6 +298,8 @@ export class Workspace extends Store implements PaneHost {
 
   saveNow() {
     clearTimeout(this.saveTimer);
+    if (this.picker) return; // a dialog never changes the user's saved session
+
     const saved = (p: PaneModel): SavedLocation => {
       const l = p.loc;
       if (l?.kind === "dir") return { kind: "dir", path: l.path };
@@ -333,6 +351,78 @@ export class Workspace extends Store implements PaneHost {
     return basename(path);
   }
 
+  // ============================================================ picker (Open/Save dialog)
+
+  setPickerName(name: string) {
+    this.pickerName = name;
+    this.changed();
+  }
+
+  setPickerFilterIndex(index: number) {
+    this.pickerFilterIndex = index;
+    this.changed();
+  }
+
+  pickerFilter(): { label: string; extensions: string[] } | null {
+    return this.picker?.filters[this.pickerFilterIndex] ?? null;
+  }
+
+  /** Adds the filter's default extension to a save name that has none. */
+  private applyExtension(name: string): string {
+    const ext = this.pickerFilter()?.extensions[0];
+    if (!ext || ext === "*") return name;
+    return /\.[^\\/.]+$/.test(name) ? name : `${name}.${ext}`;
+  }
+
+  pickerCanConfirm(): boolean {
+    const pane = this.pane;
+    if (!this.picker || !pane) return false;
+    if (this.picker.mode === "folder") return !!pane.workDir;
+    if (this.picker.mode === "open") {
+      const sel = pane.selected();
+      return sel.length === 1 && !sel[0].isDir;
+    }
+    return this.pickerName.trim().length > 0 && !!pane.workDir;
+  }
+
+  async confirmPicker(): Promise<void> {
+    const pane = this.pane;
+    if (!this.picker || !pane) return;
+    const dir = pane.workDir;
+    if (this.picker.mode === "folder") {
+      if (dir) await this.bridge.resolvePicker(dir);
+      return;
+    }
+    if (this.picker.mode === "open") {
+      const sel = pane.selected();
+      const file = sel.length === 1 && !sel[0].isDir ? sel[0] : null;
+      if (file) await this.bridge.resolvePicker(file.path);
+      return;
+    }
+    if (!dir) return;
+    const name = this.applyExtension(this.pickerName.trim());
+    const bad = invalidNameReason(name);
+    if (bad) {
+      this.toast(bad, { error: true });
+      return;
+    }
+    const full = join(dir, name);
+    if (await this.bridge.exists(full)) {
+      const ok = await this.confirm(
+        "Replace file?",
+        `"${name}" already exists in this folder. Replace it?`,
+        "Replace",
+        true,
+      );
+      if (!ok) return;
+    }
+    await this.bridge.resolvePicker(full);
+  }
+
+  cancelPicker() {
+    void this.bridge.resolvePicker(null);
+  }
+
   // ============================================================ PaneHost
 
   private makePane(tab: Tab): PaneModel {
@@ -355,6 +445,11 @@ export class Workspace extends Store implements PaneHost {
   }
 
   onSelection(pane: PaneModel) {
+    if (this.picker?.mode === "save" && pane === this.pane) {
+      const sel = pane.selected();
+      const file = sel.length === 1 && !sel[0].isDir ? sel[0] : null;
+      if (file) this.pickerName = file.name;
+    }
     if (pane === this.pane) this.changed();
   }
 
@@ -593,6 +688,10 @@ export class Workspace extends Store implements PaneHost {
   // ============================================================ opening
 
   async openEntries(pane: PaneModel, entries: FsEntry[], { newTab = false } = {}) {
+    if (this.picker?.mode === "open" && entries.length === 1 && !entries[0].isDir) {
+      await this.bridge.resolvePicker(entries[0].path);
+      return;
+    }
     const dirs = entries.filter((e) => e.isDir);
     const files = entries.filter((e) => !e.isDir);
     if (dirs.length === 1 && !files.length && !newTab) {

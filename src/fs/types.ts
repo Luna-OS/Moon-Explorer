@@ -27,6 +27,18 @@ export type PlaceId =
   "home" | "desktop" | "documents" | "downloads" | "pictures" | "music" | "videos";
 export type Places = Partial<Record<PlaceId, string | null>>;
 
+/**
+ * Moon Explorer launched as an Open/Save dialog (electron/picker.cjs, docs/picker.md).
+ * `extensions` are lower-case and without the dot; `["*"]` means every file.
+ */
+export interface PickerRequest {
+  mode: "save" | "open" | "folder";
+  title: string;
+  suggestedName: string;
+  startDir: string | null;
+  filters: { label: string; extensions: string[] }[];
+}
+
 /** What to open at start; the same shape as the default-file-manager module's start path. */
 export type StartTarget =
   | { kind: "home" }
@@ -118,6 +130,10 @@ export interface MoonBridge {
   refreshDrives(): Promise<FsDrive[]>;
   env(): Promise<Record<string, string>>;
   takeStart(): Promise<StartTarget | null>;
+  /** The Open/Save dialog request when launched as one, else null. */
+  picker(): Promise<PickerRequest | null>;
+  /** Returns the chosen path to the caller (null = cancelled) and closes the dialog. */
+  resolvePicker(path: string | null): Promise<void>;
   defaultFileManager(): Promise<DefaultFileManagerStatus>;
   /** Registers Moon Explorer (or repairs the registration), or gives everything back to Windows Explorer. */
   setDefaultFileManager(enabled: boolean): Promise<DefaultFileManagerStatus>;
@@ -155,6 +171,8 @@ export interface MoonBridge {
 
   open(path: string): Promise<void>;
   openWith(path: string): Promise<void>;
+  /** Runs a program elevated through the Windows UAC prompt. */
+  runAsAdmin(path: string): Promise<void>;
   reveal(path: string): Promise<void>;
   openInWindowsExplorer(target: string): Promise<void>;
   resolveLink(path: string): Promise<string | null>;
