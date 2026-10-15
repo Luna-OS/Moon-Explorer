@@ -164,3 +164,18 @@ describe("drive space", () => {
     expect(await within(drives).findByText("145 GB free of 931 GB")).toBeInTheDocument();
   });
 });
+
+describe("tabs", () => {
+  it("switches to another tab when its tab is clicked", async () => {
+    await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: "New tab" }));
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(2);
+    expect(tabs[1]).toHaveAttribute("aria-selected", "true");
+    expect(tabs[0]).toHaveAttribute("aria-selected", "false");
+
+    fireEvent.mouseDown(tabs[0], { button: 0 });
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+    expect(tabs[1]).toHaveAttribute("aria-selected", "false");
+  });
+});

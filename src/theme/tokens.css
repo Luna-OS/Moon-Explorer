@@ -340,8 +340,11 @@ body {
     background: var(--me-frame);
     border-bottom: 1px solid var(--me-border);
   }
+  /* The tabs are divs, so they need no-drag too, or the title bar's drag region
+   * swallows the clicks and you can't switch tabs. Empty title-bar space stays draggable. */
   .me-titlebar button,
-  .me-titlebar input {
+  .me-titlebar input,
+  .me-titlebar [role="tab"] {
     -webkit-app-region: no-drag;
     app-region: no-drag;
   }
