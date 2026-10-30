@@ -102,6 +102,22 @@ export class DemoBridge implements MoonBridge {
     }
     const night = this.node(`${HOME}\\Documents\\Night sky photos`);
     if (night) this.add(night, file("moonrise.jpg", 3_211_264, parseDate("2026-08-12 21:01")));
+    const downloads = this.node(`${HOME}\\Downloads`);
+    if (downloads) {
+      // Varied dates so the newest-first order (like Windows Explorer) is visible.
+      this.add(downloads, file("moon-setup.exe", 44_040_192, parseDate("2026-09-01 12:00")));
+      this.add(downloads, file("star-chart.pdf", 827_392, parseDate("2026-10-20 09:30")));
+      this.add(downloads, file("eclipse.jpg", 2_201_088, parseDate("2026-10-28 18:05")));
+    }
+    // iCloud for Windows: iCloud Drive in the home folder, iCloud Photos under Pictures.
+    const icloud = this.add(home, dir("iCloudDrive"));
+    this.add(icloud, dir("Documents"));
+    this.add(icloud, file("Shopping list.txt", 240, parseDate("2026-10-15 11:00"), "Milk\nEggs"));
+    const pictures = this.node(`${HOME}\\Pictures`);
+    if (pictures) {
+      const icloudPhotos = this.add(pictures, dir("iCloud Photos"));
+      this.add(icloudPhotos, file("IMG_0001.HEIC", 1_835_008, parseDate("2026-10-10 08:00")));
+    }
     const d = this.node("D:\\");
     if (d) this.add(d, dir("Games"));
   }
@@ -183,6 +199,8 @@ export class DemoBridge implements MoonBridge {
       pictures: `${HOME}\\Pictures`,
       music: `${HOME}\\Music`,
       videos: `${HOME}\\Videos`,
+      icloudDrive: `${HOME}\\iCloudDrive`,
+      icloudPhotos: `${HOME}\\Pictures\\iCloud Photos`,
     });
   }
 

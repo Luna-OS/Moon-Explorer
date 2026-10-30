@@ -10,6 +10,7 @@ import { Sky } from "@/theme/Sky";
 import { useDocumentTheme, type ThemeChoice } from "@/theme/useTheme";
 import {
   CloseIcon,
+  CloudIcon,
   ComputerIcon,
   DiskIcon,
   DownloadIcon,
@@ -53,6 +54,8 @@ const PLACE_ICONS: Record<string, ReactNode> = {
   pictures: <ImageIcon />,
   music: <MediaIcon />,
   videos: <FilmIcon />,
+  icloudDrive: <CloudIcon />,
+  icloudPhotos: <CloudIcon />,
 };
 
 const THEME_KEY = "moonexplorer.theme";

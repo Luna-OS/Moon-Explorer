@@ -43,6 +43,8 @@ export interface PaneHost {
   reportError(message: string): void;
   /** In Open/Save dialog mode, the extensions the chosen file type allows (lower-case, no dot), or null for all. */
   pickerExtensions(): string[] | null;
+  /** The sort a location opens with before the user picks one (Downloads is newest-first, like Windows Explorer). */
+  defaultSort(loc: Location): Sort;
   /** Asks Windows again for the drives' size and free space (This PC shows them). */
   refreshDrives(): Promise<void>;
 }
@@ -106,6 +108,8 @@ export class PaneModel extends Store {
   anchor = -1;
   filter = "";
   sort: Sort;
+  /** True once the user chose a sort (a column click), so navigation stops applying the per-folder default. */
+  private explicitSort = false;
   mode: ViewMode;
   iconSize: number;
   busy = false;
@@ -211,6 +215,7 @@ export class PaneModel extends Store {
       entry = this.history[this.hIndex] ?? { loc };
     }
     this.loc = entry.loc;
+    if (!this.explicitSort) this.sort = this.host.defaultSort(this.loc);
     this.items = items;
     this.sel.clear();
     this.cursor = -1;
@@ -322,6 +327,7 @@ export class PaneModel extends Store {
 
   setSort(sort: Sort) {
     this.sort = { ...sort };
+    this.explicitSort = true;
     this.refreshView(this.view[this.cursor]?.path);
     this.changed();
   }

@@ -347,6 +347,18 @@ async function listDrives({ fresh = false } = {}) {
   return drives;
 }
 
+/** The first of `candidates` that exists on disk, or null. */
+function firstExisting(candidates) {
+  for (const c of candidates) {
+    try {
+      if (c && fs.existsSync(c)) return c;
+    } catch {
+      /* unreadable: treat as missing */
+    }
+  }
+  return null;
+}
+
 function places() {
   const get = (k) => {
     try {
@@ -355,14 +367,25 @@ function places() {
       return null;
     }
   };
+  const home = get("home");
+  const pictures = get("pictures");
+  // iCloud for Windows creates these folders; they're only shown when they exist.
+  const icloudDrive = home ? firstExisting([path.join(home, "iCloudDrive")]) : null;
+  const icloudPhotos = firstExisting([
+    pictures && path.join(pictures, "iCloud Photos"),
+    home && path.join(home, "iCloudPhotos"),
+    home && path.join(home, "Pictures", "iCloud Photos"),
+  ]);
   return {
-    home: get("home"),
+    home,
     desktop: get("desktop"),
     documents: get("documents"),
     downloads: get("downloads"),
-    pictures: get("pictures"),
+    pictures,
     music: get("music"),
     videos: get("videos"),
+    icloudDrive,
+    icloudPhotos,
   };
 }
 
