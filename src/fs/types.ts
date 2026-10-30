@@ -24,7 +24,15 @@ export interface FsDrive extends Drive {
 }
 
 export type PlaceId =
-  "home" | "desktop" | "documents" | "downloads" | "pictures" | "music" | "videos";
+  | "home"
+  | "desktop"
+  | "documents"
+  | "downloads"
+  | "pictures"
+  | "music"
+  | "videos"
+  | "icloudDrive"
+  | "icloudPhotos";
 export type Places = Partial<Record<PlaceId, string | null>>;
 
 /**

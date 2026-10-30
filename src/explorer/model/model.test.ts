@@ -8,7 +8,8 @@ import { filterEntries, sortEntries } from "./pane";
 import { Workspace } from "./workspace";
 import { entryMenu } from "../commands";
 
-const DOCS = "C:\\Users\\Luna\\Documents";
+const HOME = "C:\\Users\\Luna";
+const DOCS = `${HOME}\\Documents`;
 
 function entry(name: string, extra: Partial<FsEntry> = {}): FsEntry {
   const isDir = extra.isDir ?? false;
@@ -150,6 +151,35 @@ describe("workspace", () => {
     const again = new Workspace(new DemoBridge(null), localStorage);
     await again.init();
     expect(again.tabs.map((t) => t.activePane.path)).toEqual([DOCS, `${DOCS}\\MoonDisk`]);
+  });
+
+  it("opens the Downloads folder newest-first, like Windows Explorer", async () => {
+    const pane = ws.pane!;
+    await pane.go(`${HOME}\\Downloads`);
+    expect(pane.sort).toEqual({ key: "date", dir: "desc" });
+    // The most recently modified download is at the top.
+    expect(pane.view[0].name).toBe("eclipse.jpg");
+    // Other folders still open in the default name order.
+    await pane.go(DOCS);
+    expect(pane.sort).toEqual({ key: "name", dir: "asc" });
+  });
+
+  it("keeps the sort the user picked after they leave Downloads", async () => {
+    const pane = ws.pane!;
+    await pane.go(`${HOME}\\Downloads`);
+    pane.setSort({ key: "name", dir: "asc" });
+    await pane.go(DOCS);
+    await pane.go(`${HOME}\\Downloads`);
+    // Once chosen, the user's sort sticks instead of reverting to newest-first.
+    expect(pane.sort).toEqual({ key: "name", dir: "asc" });
+  });
+
+  it("shows iCloud Drive and iCloud Photos as places", () => {
+    expect(ws.places.icloudDrive).toBe(`${HOME}\\iCloudDrive`);
+    expect(ws.places.icloudPhotos).toBe(`${HOME}\\Pictures\\iCloud Photos`);
+    expect(ws.placeLabel("icloudDrive")).toBe("iCloud Drive");
+    expect(ws.placeLabel("icloudPhotos")).toBe("iCloud Photos");
+    expect(ws.placeOf(`${HOME}\\iCloudDrive`)).toBe("icloudDrive");
   });
 });
 

@@ -142,6 +142,8 @@ const PLACE_LABELS: Record<string, string> = {
   pictures: "Pictures",
   music: "Music",
   videos: "Videos",
+  icloudDrive: "iCloud Drive",
+  icloudPhotos: "iCloud Photos",
 };
 
 /** Everything that spans panes: tabs, clipboard, undo, background tasks, dialogs, toasts and settings. */
@@ -370,6 +372,14 @@ export class Workspace extends Store implements PaneHost {
     const f = this.pickerFilter();
     if (!f || f.extensions.includes("*")) return null;
     return f.extensions;
+  }
+
+  /** The sort a folder opens with: the Downloads folder is newest-first like Windows Explorer, otherwise the setting. */
+  defaultSort(loc: Location): Sort {
+    if (loc.kind === "dir" && this.placeOf(loc.path) === "downloads") {
+      return { key: "date", dir: "desc" };
+    }
+    return this.settings.sort;
   }
 
   pickerFilter(): { label: string; extensions: string[] } | null {
