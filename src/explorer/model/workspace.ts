@@ -237,10 +237,17 @@ export class Workspace extends Store implements PaneHost {
       this.changed();
       return;
     }
-    const session = this.settings.restoreSession ? this.settings.session : null;
     const explicit = start && start.kind !== "home";
+    // Opened for one folder or file (a double-click in Windows, "Open with"): show just that, so
+    // the old tabs don't pile up on every launch.
+    const session = this.settings.restoreSession && !explicit ? this.settings.session : null;
     if (session?.tabs.length) {
-      for (const t of session.tabs) await this.restoreTab(t);
+      for (const t of session.tabs) {
+        // A saved session may hold the same folder several times; one tab each is enough.
+        const only = !t.split || t.panes.length < 2 ? t.panes[0] : null;
+        if (only && this.findTab(only.kind === "dir" ? only.path : only)) continue;
+        await this.restoreTab(t);
+      }
       this.activateTab(this.tabs[Math.min(session.active, this.tabs.length - 1)] ?? null);
     }
     if (explicit || !this.tabs.length) await this.openStart(start ?? { kind: "home" });
@@ -257,15 +264,15 @@ export class Workspace extends Store implements PaneHost {
   async openStart(start: StartTarget): Promise<void> {
     switch (start.kind) {
       case "folder":
-        await this.newTab(start.path);
+        await this.openTab(start.path);
         return;
       case "file": {
-        const tab = await this.newTab(start.folder);
+        const tab = await this.openTab(start.folder);
         tab.activePane.selectPaths([start.path]);
         return;
       }
       case "this-pc":
-        await this.newTab({ kind: "this-pc" });
+        await this.openTab({ kind: "this-pc" });
         return;
       case "shell":
         await this.bridge.openInWindowsExplorer(start.target);
@@ -276,7 +283,7 @@ export class Workspace extends Store implements PaneHost {
         if (!this.tabs.length) await this.newTab(this.places.home ?? { kind: "this-pc" });
         return;
       default:
-        await this.newTab(this.places.home ?? { kind: "this-pc" });
+        await this.openTab(this.places.home ?? { kind: "this-pc" });
     }
   }
 
@@ -494,6 +501,27 @@ export class Workspace extends Store implements PaneHost {
     return tab;
   }
 
+  /** The tab (not split) that already shows `loc`, if any. */
+  findTab(loc: Location | string): Tab | null {
+    const want = typeof loc === "string" ? ({ kind: "dir", path: loc } as const) : loc;
+    if (want.kind === "search") return null;
+    return (
+      this.tabs.find((t) => {
+        const l = t.split ? null : t.activePane.loc;
+        if (want.kind === "this-pc") return l?.kind === "this-pc";
+        return l?.kind === "dir" && samePath(l.path, want.path);
+      }) ?? null
+    );
+  }
+
+  /** Switches to the tab that already shows `loc`, or opens a new one: no second tab for the same folder. */
+  async openTab(loc: Location | string): Promise<Tab> {
+    const open = this.findTab(loc);
+    if (!open) return this.newTab(loc);
+    this.activateTab(open);
+    return open;
+  }
+
   private async restoreTab(t: {
     panes: SavedLocation[];
     split: boolean;
@@ -544,6 +572,19 @@ export class Workspace extends Store implements PaneHost {
     this.save();
     this.changed();
     return true;
+  }
+
+  closeOtherTabs(keep: Tab) {
+    for (const t of this.tabs.filter((x) => x !== keep)) this.closeTab(t);
+    this.activateTab(keep);
+  }
+
+  closeTabsToRight(of: Tab) {
+    const i = this.tabs.indexOf(of);
+    if (i < 0) return;
+    const active = this.activeTab;
+    for (const t of this.tabs.slice(i + 1)) this.closeTab(t);
+    if (active && !this.tabs.includes(active)) this.activateTab(of);
   }
 
   get canReopenTab() {

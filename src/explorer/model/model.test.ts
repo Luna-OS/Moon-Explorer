@@ -153,6 +153,45 @@ describe("workspace", () => {
     expect(again.tabs.map((t) => t.activePane.path)).toEqual([DOCS, `${DOCS}\\MoonDisk`]);
   });
 
+  it("opens only the requested folder at start, not the old tabs as well", async () => {
+    await ws.newTab(`${DOCS}\\MoonDisk`);
+    ws.saveNow();
+    const again = new Workspace(
+      new DemoBridge({ kind: "folder", path: `${HOME}\\Downloads` }),
+      localStorage,
+    );
+    await again.init();
+    expect(again.tabs.map((t) => t.activePane.path)).toEqual([`${HOME}\\Downloads`]);
+  });
+
+  it("restores a folder saved twice as one tab", async () => {
+    await ws.newTab(DOCS);
+    await ws.newTab(DOCS);
+    ws.saveNow();
+    const again = new Workspace(new DemoBridge(null), localStorage);
+    await again.init();
+    expect(again.tabs.map((t) => t.activePane.path)).toEqual([DOCS]);
+  });
+
+  it("switches to the open tab instead of opening the same folder again", async () => {
+    const first = ws.activeTab;
+    await ws.newTab(`${DOCS}\\MoonDisk`);
+    await ws.openStart({ kind: "folder", path: DOCS });
+    expect(ws.tabs).toHaveLength(2);
+    expect(ws.activeTab).toBe(first);
+  });
+
+  it("closes the other tabs and the tabs to the right", async () => {
+    const first = ws.activeTab!;
+    const second = await ws.newTab(`${DOCS}\\MoonDisk`);
+    await ws.newTab(`${HOME}\\Downloads`);
+    ws.closeTabsToRight(second);
+    expect(ws.tabs).toEqual([first, second]);
+    ws.closeOtherTabs(second);
+    expect(ws.tabs).toEqual([second]);
+    expect(ws.activeTab).toBe(second);
+  });
+
   it("opens the Downloads folder newest-first, like Windows Explorer", async () => {
     const pane = ws.pane!;
     await pane.go(`${HOME}\\Downloads`);

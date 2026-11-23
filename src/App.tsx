@@ -184,6 +184,38 @@ export default function App({ bridge }: { bridge?: MoonBridge }) {
     });
   }
 
+  function openTabMenu(t: Tab, e: MouseEvent<HTMLElement>) {
+    const i = ws.tabs.indexOf(t);
+    const dir = t.activePane.workDir;
+    setMenu({
+      label: t.activePane.title(),
+      anchor: anchorFromEvent(e),
+      items: [
+        {
+          label: "Duplicate tab",
+          icon: <PlusIcon size={15} />,
+          onSelect: () => void ws.newTab(dir ?? { kind: "this-pc" }),
+        },
+        { label: "Close tab", icon: <CloseIcon size={15} />, onSelect: () => ws.closeTab(t) },
+        {
+          label: "Close other tabs",
+          disabled: ws.tabs.length < 2,
+          onSelect: () => ws.closeOtherTabs(t),
+        },
+        {
+          label: "Close tabs to the right",
+          disabled: i >= ws.tabs.length - 1,
+          onSelect: () => ws.closeTabsToRight(t),
+        },
+        {
+          label: "Reopen closed tab",
+          disabled: !ws.canReopenTab,
+          onSelect: () => void ws.reopenTab(),
+        },
+      ],
+    });
+  }
+
   function openPlaceMenu(path: string, e: MouseEvent<HTMLButtonElement>) {
     const other = pane ? ws.otherPane(pane) : null;
     setMenu({
@@ -259,7 +291,7 @@ export default function App({ bridge }: { bridge?: MoonBridge }) {
           alt=""
           className="mr-1 mb-2 size-5 self-center"
         />
-        <TabStrip ws={ws} />
+        <TabStrip ws={ws} onMenu={openTabMenu} />
         <button
           type="button"
           className="me-icon-btn mb-1"
@@ -633,7 +665,13 @@ function PaneSlot({
 const TAB_TYPE = "application/x-moon-explorer-tab";
 
 /** The tabs in the title bar: drag to reorder, middle-click to close, drop files to move them in. */
-function TabStrip({ ws }: { ws: Workspace }) {
+function TabStrip({
+  ws,
+  onMenu,
+}: {
+  ws: Workspace;
+  onMenu: (tab: Tab, e: MouseEvent<HTMLElement>) => void;
+}) {
   return (
     <div
       role="tablist"
@@ -671,6 +709,10 @@ function TabStrip({ ws }: { ws: Workspace }) {
             }}
             onAuxClick={(e) => {
               if (e.button === 1) ws.closeTab(tab);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onMenu(tab, e);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") ws.activateTab(tab);
